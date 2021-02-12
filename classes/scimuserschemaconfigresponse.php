@@ -202,17 +202,6 @@ class scimuserschemaconfigresponse extends scimresponse {
                             provider, e.g., 'bjensen@example.com' instead of 'bjensen@EXAMPLE.COM'. KAYA - Email address"
                     ),
                     array(
-                        "name" => "display",
-                        "type" => "string",
-                        "multiValued" => false,
-                        "required" => false,
-                        "caseExact" => false,
-                        "mutability" => "readWrite",
-                        "returned" => "default",
-                        "uniqueness" => "none",
-                        "description" => "A human-readable name, primarily used for display purposes."
-                    ),
-                    array(
                         "name" => "type",
                         "type" => "string",
                         "multiValued" => false,

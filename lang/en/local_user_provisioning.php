@@ -37,3 +37,5 @@ $string['error:notfound'] = 'Not Found'; // Error code 404.
 $string['error:notfound_help'] = 'Specified resource or endpoint does not exist.';
 $string['error:userexists'] = 'User already exists.';
 $string['error:invaliduri'] = 'Invalid request uri.';
+$string['error:invalifilter'] = 'invalidFilter';
+$string['error:invalifilter_help'] = 'The specified filter syntax was invalid or the specified attribute and filter comparison combination is not supported.';
