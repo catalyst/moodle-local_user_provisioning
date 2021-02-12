@@ -51,6 +51,8 @@ $router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_CUSTOM_USE
 $router->map('GET', '/v2/Users', 'local_user_provisioning_get_users');
 // Get user details.
 $router->map('GET', '/v2/Users/[**:id]', 'local_user_provisioning_get_user');
+// Suspend user details.
+$router->map('DELETE', '/v2/Users/[**:id]', 'local_user_provisioning_suspend_user');
 
 /*
  * Match the route and decode the json. All target functions should accept json associative array as the

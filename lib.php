@@ -412,9 +412,11 @@ function local_user_provisioning_get_user($json, $idnumber) : void {
     }
 
     $sql = local_user_provisioning_get_userquerysql();
-    $sql .= " WHERE u.idnumber = :idnumber";
+    $sql .= " WHERE u.suspended = :suspended
+                AND u.idnumber = :idnumber";
 
     $params['organisationid'] = $orgdetails->id;
+    $params['suspended'] = 0;
     $params['idnumber'] = $idnumber;
 
     if ($record = $DB->get_record_sql($sql, $params)) {
@@ -425,4 +427,44 @@ function local_user_provisioning_get_user($json, $idnumber) : void {
                 get_string('error:notfound', 'local_user_provisioning'), 404);
     }
 
+}
+
+/**
+ * Suspend given user.
+ *
+ * @param array $json this isn't used but must be here because the idnumber is passed as the second parameter.
+ * @param string $idnumber User idnumber of the requested user.
+ * @return void
+ */
+function local_user_provisioning_suspend_user(array $json, string $idnumber) : void {
+    global $DB;
+
+    // Validate the Bearer token.
+    local_user_provisioning_validatetoken();
+
+    // Get Organisation details.
+    $orgdetails = local_user_provisioning_get_org_details();
+
+    $sql = "SELECT u.id
+              FROM {user} u
+              JOIN (SELECT userid,
+                           organisationid,
+                           managerjaid,
+                           positionid
+                      FROM (SELECT DISTINCT ON (userid) *
+                              FROM {job_assignment}
+                          ORDER BY userid, sortorder ASC
+                            ) t
+                  ORDER BY sortorder ASC) AS tt ON u.id = tt.userid AND tt.organisationid = :organisationid
+             WHERE idnumber = :idnumber";
+    $params['organisationid'] = $orgdetails->id;
+    $params['idnumber'] = $idnumber;
+
+    if ($userid = $DB->get_field_sql($sql, $params)) {
+        $DB->set_field('user', 'suspended', 1, array('id' => $userid));
+        local_user_provisioning_scim_error_msg(get_string('nocontent_help', 'local_user_provisioning', $idnumber),
+                    get_string('nocontent', 'local_user_provisioning'), 204);
+    }
+
+    local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
 }
