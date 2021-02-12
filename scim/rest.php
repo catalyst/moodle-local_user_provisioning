@@ -47,6 +47,8 @@ $router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_ENTERPRISE
 // Custom Extention Schema - defines custom fields that are not part of SCIM v2.
 $router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_CUSTOM_USER_URN,
                 'local_user_provisioning_get_custuserschema');
+// Filter users.
+$router->map('GET', '/v2/Users', 'local_user_provisioning_get_users');
 
 /*
  * Match the route and decode the json. All target functions should accept json associative array as the

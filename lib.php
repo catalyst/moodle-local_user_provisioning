@@ -28,6 +28,9 @@ defined('MOODLE_INTERNAL') || die();
 if (!defined('SCIM2_FILTERMAXRECORDS')) {
     define('SCIM2_FILTERMAXRECORDS', 25);
 }
+if (!defined('USERPROFILEFIELDTEAM')) {
+    define('USERPROFILEFIELDTEAM', 'team');
+}
 
 ini_set('html_errors', false);
 
@@ -169,5 +172,219 @@ function local_user_provisioning_get_serviceproviderconfig() : void {
     local_user_provisioning_validatetoken();
 
     $resp = new scimserviceconfigresponse('ServiceConfig');
+    $resp->send_response(200);
+}
+
+/**
+ * Get header Authorization.
+ *
+ * @return string Returns Authorization header.
+ */
+function local_user_provisioning_getauthorizationheader() : string {
+
+    $headers = null;
+    if (isset($_SERVER['Authorization'])) {
+        $headers = trim($_SERVER["Authorization"]);
+    } else if (isset($_SERVER['HTTP_AUTHORIZATION'])) { // Nginx or fast CGI.
+        $headers = trim($_SERVER["HTTP_AUTHORIZATION"]);
+    } else if (function_exists('apache_request_headers')) {
+        $apacherequestheaders = (array) apache_request_headers();
+        /*
+            Server-side fix for bug in old Android versions (a nice side-effect of this fix means we don't
+            care about capitalization for Authorization).
+        */
+        $apacherequestheaders = array_combine(
+                                    array_map('ucwords', array_keys($apacherequestheaders)), array_values($apacherequestheaders)
+                                );
+
+        if (isset($apacherequestheaders['Authorization'])) {
+            $headers = trim($apacherequestheaders['Authorization']);
+        }
+    }
+    return $headers;
+}
+
+/**
+ * Get access token from header.
+ *
+ * @return null|string
+ */
+function local_user_provisioning_getbearertoken() : ? string {
+
+    $headers = local_user_provisioning_getauthorizationheader();
+
+    // HEADER: Get the access token from the header.
+    if (!empty($headers)) {
+        if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
+            return $matches[1];
+        }
+    }
+    return null;
+}
+
+/**
+ * Returns what org the user should be under based on the Bearer token.
+ *
+ * @return object $orgdetails contains the organisation's id and shortname.
+ */
+function local_user_provisioning_get_org_details() : object {
+    global $DB;
+
+    $bearertoken = local_user_provisioning_getbearertoken();
+    if (!$bearertoken) {
+        local_user_provisioning_scim_error_msg(get_string('error:unauthorized_help', 'local_user_provisioning'),
+            get_string('error:unauthorized', 'local_user_provisioning'), 401);
+    }
+
+    $sql = 'SELECT org.id, org.shortname
+              FROM {org} org
+              JOIN {oauth_access_tokens} oat ON org.shortname = oat.client_id
+             WHERE oat.access_token = :bearertoken
+               AND oat.scope = :scope';
+    $params = [
+        'bearertoken' => $bearertoken,
+        'scope' => 'SCIMv2'
+    ];
+    $orgdetails = $DB->get_record_sql($sql, $params);
+
+    if ($orgdetails) {
+        return $orgdetails;
+    } else {
+        local_user_provisioning_scim_error_msg(get_string('error:forbidden_help', 'local_user_provisioning'),
+            get_string('error:forbidden', 'local_user_provisioning'), 403);
+    }
+}
+
+/**
+ * Change int value to true or false.
+ *
+ * @param ini Suspended
+ * @return bool
+ */
+function local_user_provisioning_isactive(int $suspended) : bool {
+    if ($suspended == 1) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+/**
+ * Common SQL for fetching user record(s). Will be used to get a given user's record or in a user filter query.
+ *
+ * @return string SQL Script.
+ */
+function local_user_provisioning_get_userquerysql() : string {
+
+    return "SELECT distinct u.id, u.idnumber, u.firstname, u.lastname, u.email, u.username, u.lang, u.auth, u.department,
+                        u.country, u.suspended, u.timecreated, u.timemodified, uid.data AS team, p.fullname AS title,
+                        um.id AS managerid, um.firstname AS managerfirstname, um.lastname AS managerlastname
+              FROM {user} u
+              JOIN (SELECT userid,
+                           organisationid,
+                           managerjaid,
+                           positionid
+                      FROM (SELECT DISTINCT ON (userid) *
+                              FROM {job_assignment}
+                          ORDER BY userid, sortorder ASC
+                            ) t
+                  ORDER BY sortorder ASC) AS tt ON u.id = tt.userid AND tt.organisationid = :organisationid
+              LEFT JOIN {job_assignment} ja ON tt.managerjaid = ja.id
+              LEFT JOIN {pos} p ON tt.positionid = p.id
+              LEFT JOIN {user} um ON ja.userid = um.id
+              LEFT JOIN {user_info_data} uid ON u.id = uid.userid AND fieldid = :fieldid";
+}
+
+/**
+ * Filter users
+ * @return void
+ */
+function local_user_provisioning_get_users() : void {
+    global $DB;
+
+    // Validate the Bearer token.
+    local_user_provisioning_validatetoken();
+
+    // Get Organisation details.
+    $orgdetails = local_user_provisioning_get_org_details();
+
+    $extrasql = '';
+    $invalidfilter = false;
+    $resources = array();
+    $filter = $_GET['filter'];
+
+    if ($filter != "") {
+        $filter = str_getcsv($_GET['filter'], " ", '"');
+
+        switch ($filter[0]) {
+            case 'userName':
+                $extrasql = 'WHERE u.username ';
+            break;
+            case 'name.familyName':
+                $extrasql = 'WHERE u.lastname ';
+            break;
+            case 'name.givenName':
+                $extrasql = 'WHERE u.firstname ';
+            break;
+            case 'emails':
+                $extrasql = 'WHERE u.email ';
+            break;
+            default:
+                $invalidfilter = true;
+            break;
+        }
+
+        if ($extrasql) {
+            switch ($filter[1]) {
+                case 'sw':
+                    $extrasql .= 'LIKE :filter';
+                    $params['filter'] = $filter[2] . '%';
+                break;
+                case 'ew':
+                    $extrasql .= 'LIKE :filter';
+                    $params['filter'] = '%' . $filter[2];
+                break;
+                case 'co':
+                    $extrasql .= 'LIKE :filter';
+                    $params['filter'] = '%' . $filter[2] . '%';
+                break;
+                case 'eq':
+                    $extrasql .= '= :filter';
+                    $params['filter'] = $filter[2];
+                break;
+                case 'neq':
+                    $extrasql .= '!= :filter';
+                    $params['filter'] = $filter[2];
+                break;
+                default:
+                    $invalidfilter = true;
+                break;
+            }
+        }
+
+        if ($invalidfilter) {
+            local_user_provisioning_scim_error_msg(get_string('error:invalifilter_help', 'local_user_provisioning'),
+                get_string('error:invalifilter', 'local_user_provisioning'), 400);
+        }
+
+        // Custom user profile field - team.
+        $params['fieldid'] = 0;
+        if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+            $params['fieldid'] = $fieldid;
+        }
+
+        $sql = local_user_provisioning_get_userquerysql();
+        $sql .= $extrasql . " ORDER BY u.id LIMIT :rowcount";
+
+        $params['organisationid'] = $orgdetails->id;
+        $params['rowcount'] = SCIM2_FILTERMAXRECORDS;
+
+        $records = $DB->get_records_sql($sql, $params);
+        foreach ($records as $record) {
+            $resources[] = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), false);
+        }
+    }
+
+    $resp = new scimlistresponse($resources);
     $resp->send_response(200);
 }
