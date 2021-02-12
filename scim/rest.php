@@ -49,6 +49,8 @@ $router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_CUSTOM_USE
                 'local_user_provisioning_get_custuserschema');
 // Filter users.
 $router->map('GET', '/v2/Users', 'local_user_provisioning_get_users');
+// Get user details.
+$router->map('GET', '/v2/Users/[**:id]', 'local_user_provisioning_get_user');
 
 /*
  * Match the route and decode the json. All target functions should accept json associative array as the

@@ -39,3 +39,4 @@ $string['error:userexists'] = 'User already exists.';
 $string['error:invaliduri'] = 'Invalid request uri.';
 $string['error:invalifilter'] = 'invalidFilter';
 $string['error:invalifilter_help'] = 'The specified filter syntax was invalid or the specified attribute and filter comparison combination is not supported.';
+$string['error:usernotfound'] = 'User {$a} not found';

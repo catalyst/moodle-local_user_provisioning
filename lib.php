@@ -388,3 +388,41 @@ function local_user_provisioning_get_users() : void {
     $resp = new scimlistresponse($resources);
     $resp->send_response(200);
 }
+
+/**
+ * Get given user details.
+ *
+ * @param array $json this isn't used but must be here because the idnumber is passed as the second parameter.
+ * @param int $idnumber User idnumber of the requested user.
+ * @return void
+ */
+function local_user_provisioning_get_user($json, $idnumber) : void {
+    global $DB;
+
+    // Validate the Bearer token.
+    local_user_provisioning_validatetoken();
+
+    // Get Organisation details.
+    $orgdetails = local_user_provisioning_get_org_details();
+
+    // Custom user profile field - team.
+    $params['fieldid'] = 0;
+    if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+        $params['fieldid'] = $fieldid;
+    }
+
+    $sql = local_user_provisioning_get_userquerysql();
+    $sql .= " WHERE u.idnumber = :idnumber";
+
+    $params['organisationid'] = $orgdetails->id;
+    $params['idnumber'] = $idnumber;
+
+    if ($record = $DB->get_record_sql($sql, $params)) {
+        $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
+        $resp->send_response(200);
+    } else {
+        local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber),
+                get_string('error:notfound', 'local_user_provisioning'), 404);
+    }
+
+}
