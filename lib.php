@@ -180,7 +180,7 @@ function local_user_provisioning_get_serviceproviderconfig() : void {
  *
  * @return string Returns Authorization header.
  */
-function local_user_provisioning_getauthorizationheader() : string {
+function local_user_provisioning_get_authorizationheader() : string {
 
     $headers = null;
     if (isset($_SERVER['Authorization'])) {
@@ -209,9 +209,9 @@ function local_user_provisioning_getauthorizationheader() : string {
  *
  * @return null|string
  */
-function local_user_provisioning_getbearertoken() : ? string {
+function local_user_provisioning_get_bearertoken() : ? string {
 
-    $headers = local_user_provisioning_getauthorizationheader();
+    $headers = local_user_provisioning_get_authorizationheader();
 
     // HEADER: Get the access token from the header.
     if (!empty($headers)) {
@@ -230,7 +230,7 @@ function local_user_provisioning_getbearertoken() : ? string {
 function local_user_provisioning_get_org_details() : object {
     global $DB;
 
-    $bearertoken = local_user_provisioning_getbearertoken();
+    $bearertoken = local_user_provisioning_get_bearertoken();
     if (!$bearertoken) {
         local_user_provisioning_scim_error_msg(get_string('error:unauthorized_help', 'local_user_provisioning'),
             get_string('error:unauthorized', 'local_user_provisioning'), 401);
