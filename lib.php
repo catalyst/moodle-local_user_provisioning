@@ -23,6 +23,8 @@
 
 namespace local_user_provisioning;
 use \stdClass;
+use totara_job\job_assignment;
+
 defined('MOODLE_INTERNAL') || die();
 
 if (!defined('SCIM2_FILTERMAXRECORDS')) {
@@ -32,7 +34,33 @@ if (!defined('USERPROFILEFIELDTEAM')) {
     define('USERPROFILEFIELDTEAM', 'team');
 }
 
+/*
+ * PROFILE_FIELDS array
+ *
+ * Add / Update as part of Create(POST) / Update(PUT) user request.
+ */
+const PROFILE_FIELDS = [
+        'firstname',
+        'lastname',
+        'email',
+        'alternatename',
+        'auth',
+        'lang',
+        'department',
+        'city',
+        'country',
+        'suspended',
+        'team',
+        'position',
+        'positionid',
+        'manager',
+        'managerid',
+        'managerjaid'
+    ];
+
 ini_set('html_errors', false);
+require_once($CFG->dirroot . '/totara/hierarchy/lib.php');
+require_once($CFG->dirroot . '/user/lib.php');
 
 /**
  * Prints out a scim error message
@@ -276,8 +304,9 @@ function local_user_provisioning_isactive(int $suspended) : bool {
  */
 function local_user_provisioning_get_userquerysql() : string {
 
-    return "SELECT distinct u.id, u.idnumber, u.firstname, u.lastname, u.email, u.username, u.lang, u.auth, u.department,
-                        u.country, u.suspended, u.timecreated, u.timemodified, uid.data AS team, p.fullname AS title,
+    return "SELECT distinct u.id, u.idnumber, u.username, u.alternatename, u.firstname, u.lastname, u.email,
+                        u.lang, u.auth, u.department, u.city, u.country, u.suspended, u.timecreated, u.timemodified,
+                        uid.data AS team, p.fullname AS title,
                         um.id AS managerid, um.firstname AS managerfirstname, um.lastname AS managerlastname
               FROM {user} u
               JOIN (SELECT userid,
@@ -425,6 +454,354 @@ function local_user_provisioning_get_user($json, $idnumber) : void {
     } else {
         local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber),
                 get_string('error:notfound', 'local_user_provisioning'), 404);
+    }
+
+}
+
+/**
+ * Validate JSON data.
+ *
+ * @param array $json User data
+ * @param string $action action = add / update
+ * @param int $portalid Portal / Organisation ID
+ * @return object User details
+ */
+function local_user_provisioning_validate_data(array $json, string $action, int $portalid) : object {
+    global $DB;
+
+    $user = new stdClass();
+    $validationerror = array();
+
+    // Define profile fields.
+    foreach (PROFILE_FIELDS as $profielfield) {
+        $user->$profielfield = '';
+    }
+
+    // Set profile fields values from the JSON.
+    foreach ($json as $key => $value) {
+        switch ($key) {
+            case 'userName':
+                $user->username = strtolower($value);
+            break;
+            case 'displayName':
+                $user->alternatename = $value;
+            break;
+            case 'preferredLanguage':
+                $lang = explode('-', $value);
+                if (is_array($lang)) {
+                    $user->lang = $lang[0];
+                }
+            break;
+            case 'title':
+                $user->position = $value;
+                $sql = "SELECT p.id
+                          FROM {org_framework} orgf
+                          JOIN {org} o ON orgf.id = o.frameworkid
+                          JOIN {org_pos_assign} opa ON orgf.id = opa.orgframeworkid
+                          JOIN {pos_framework} posf ON opa.posframeworkid = posf.id
+                          JOIN {pos} p ON posf.id = p.frameworkid
+                         WHERE o.id = :portalid
+                           AND p.fullname = :fullname";
+                $params['portalid'] = $portalid;
+                $params['fullname'] = $user->position;
+                if ($record = $DB->get_record_sql($sql, $params)) {
+                    $user->positionid = $record->id;
+                } else {
+                    $user->newpositionid = 0;
+                }
+            break;
+            case 'department':
+                $user->department = $value;
+            break;
+            case 'name':
+                if (is_array($value)) {
+                    if (!empty($value['givenName'])) {
+                        $user->firstname = $value['givenName'];
+                    }
+                    if (!empty($value['familyName'])) {
+                        $user->lastname = $value['familyName'];
+                    }
+                }
+            break;
+            case 'emails':
+                if (is_array($value)) {
+                    foreach ($value as $thisarray) {
+                        if ((isset($thisarray['primary']) && $thisarray['primary'])
+                            && (isset($thisarray['type']) && $thisarray['type'] == 'work')) {
+                            $user->email = strtolower($thisarray['value']);
+                        }
+                    }
+                }
+            break;
+            case 'addresses':
+                if (is_array($value)) {
+                    foreach ($value as $thisarray) {
+                        if ((isset($thisarray['primary']) && $thisarray['primary'])
+                            && (isset($thisarray['type']) && $thisarray['type'] == 'work')) {
+                            if (isset($thisarray['locality'])) {
+                                $user->city = $thisarray['locality'];
+                            }
+                            if (isset($thisarray['country']) && (!empty($thisarray['country']))) {
+                                $user->country = local_user_provisioning_get_country('country', $thisarray['country']);
+                            }
+                        }
+                    }
+                }
+            break;
+            case 'active':
+                if ($value) {
+                    $user->suspended = 0;
+                } else {
+                    $user->suspended = 1;
+                }
+            break;
+            case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User':
+                if (is_array($value)) {
+                    if (!empty($value['manager'])) {
+                        $user->managerid = $value['manager']['value'];
+                    }
+                    if (!empty($value['department'])) {
+                        $user->department = $value['department'];
+                    }
+                }
+            break;
+            case 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User':
+                if (is_array($value)) {
+                    foreach ($value as $thiskey => $thisvalue) {
+                        $user->$thiskey = $thisvalue;
+                    }
+                }
+            break;
+        }
+    }
+
+    // Validate profile fields.
+    if (empty($user->auth)) {
+        $user->auth = 'email';
+    }
+    if (empty($user->suspended)) {
+        $user->suspended = 0;
+    }
+    if (empty($user->username)) {
+        $validationerror[] = get_string('error:missingusername', 'local_user_provisioning');
+    }
+    if (empty($user->firstname)) {
+        $validationerror[] = get_string('error:missingfirstname', 'local_user_provisioning');
+    }
+    if (empty($user->lastname)) {
+        $validationerror[] = get_string('error:missinglastname', 'local_user_provisioning');
+    }
+    if (empty($user->email)) {
+        $validationerror[] = get_string('error:missingemail', 'local_user_provisioning');
+    }
+    if (!empty($user->managerid)) {
+        if ($usermanager = $DB->get_record('user', array('id' => $user->managerid, 'deleted' => 0))) {
+            $managerjobassignment = job_assignment::get_first($user->managerid);
+            if ($portalid == $managerjobassignment->organisationid) {
+                $user->newmanager = fullname($usermanager);
+                $user->newmanagerid = $user->managerid;
+                $user->newmanagerjaid = $managerjobassignment->id;
+            } else {
+                $validationerror[] = get_string('error:invalidmanager', 'local_user_provisioning');
+            }
+        }
+    }
+
+    if (count($validationerror)) {
+        $user->errors = $validationerror;
+    }
+
+    return $user;
+}
+
+/**
+ * Get country / country code.
+ *
+ * @param string $bywhat - country or country code
+ * @return string $content - Country name or Country code.
+ */
+function local_user_provisioning_get_country(string $bywhat, string $content) : string {
+    $countries = \get_string_manager()->get_list_of_countries(true);
+
+    foreach ($countries as $key => $value) {
+        switch ($bywhat) {
+            case 'country':
+                if ($value == $content) {
+                    return $key;
+                }
+            break;
+            case 'code':
+                if ($key == $content) {
+                    return $value;
+                }
+            break;
+        }
+    }
+    return '';
+}
+
+/**
+ * Add position.
+ *
+ * @param int $organisationid Organisation ID
+ * @param string $position Position
+ *
+ * @return mixed
+ */
+function local_user_provisioning_addpos(int $organisationid, string $position, int $userid) : ? object {
+    global $CFG, $DB;
+
+    $sql = "SELECT posf.id
+              FROM {org_framework} orgf
+              JOIN {org} o ON orgf.id = o.frameworkid
+              JOIN {org_pos_assign} opa ON orgf.id = opa.orgframeworkid
+              JOIN {pos_framework} posf ON opa.posframeworkid = posf.id
+             WHERE o.id = :organisationid";
+    $param['organisationid'] = $organisationid;
+    if ($posframeworkid = $DB->get_field_sql($sql, $param)) {
+        $hierarchy = \hierarchy::load_hierarchy('position');
+        $positionitem = new stdClass();
+        $positionitem->frameworkid = $posframeworkid;
+        $positionitem->fullname = $position;
+        $positionitem->timemodified = time();
+        $positionitem->usermodified = $userid;
+        $positionitem->visible = 1;
+        $position = $hierarchy->add_hierarchy_item($positionitem, 0, $posframeworkid, false, false);
+        return $position;
+    }
+
+    return false;
+}
+
+/**
+ * Update User job assignment.
+ *
+ * @param array $user User job assignment details
+ * @param string $action action = add / update
+ *
+ * @return void
+ */
+function local_user_provisioning_jobassignment(object $user, string $action) : void {
+
+    $jobassignmentdata = array('organisationid' => $user->organisationid);
+    // Position.
+    if (isset($user->position)) {
+        if (isset($user->newpositionid)) {
+            $position = local_user_provisioning_addpos($user->organisationid, $user->position, $user->id);
+            if ($position) {
+                $jobassignmentdata['positionid'] = $position->id;
+            }
+        } else if (isset($user->positionid)) {
+            $jobassignmentdata['positionid'] = $user->positionid;
+        }
+    }
+
+    // Manager.
+    if (isset($user->newmanagerid)) {
+        $jobassignmentdata['managerjaid'] = $user->newmanagerjaid;
+    }
+
+    // Assign user to organisation.
+    if ($action == 'add') {
+        $jobassignment = job_assignment::create_default($user->id, $jobassignmentdata);
+    } else {
+        $jobassignment = job_assignment::get_first($user->id);
+        $jobassignment->update($jobassignmentdata);
+    }
+}
+
+/**
+ * Returns a not very cryptographically secure guid
+ *
+ * @return string $guid
+ */
+function local_user_provisioning_get_guid() : string {
+    global $DB;
+
+    $charid = strtoupper(md5(uniqid(rand(), true)));
+    $hyphen = chr(45); // Character hypen (-).
+    $uuid = substr($charid, 0, 8) . $hyphen
+            .substr($charid, 8, 4).$hyphen
+            .substr($charid, 12, 4).$hyphen
+            .substr($charid, 16, 4).$hyphen
+            .substr($charid, 20, 12);
+
+    if ($DB->get_record('user', array('idnumber' => $uuid))) {
+        local_user_provisioning_get_guid();
+    }
+
+    return $uuid;
+}
+
+/**
+ * Updates user and assigns to organisation.
+ *
+ * @param array $json User details
+ * @return void
+ */
+function local_user_provisioning_create_user(array $json) : void {
+    global $DB;
+
+    // Validate the Bearer token.
+    local_user_provisioning_validatetoken();
+
+    // Get Organisation details.
+    $orgdetails = local_user_provisioning_get_org_details();
+
+    $validateuser = local_user_provisioning_validate_data($json, 'add', $orgdetails->id);
+
+    if (isset($validateuser->errors)) {
+        $validationmessage = '';
+        foreach ($validateuser->errors as $validationerror) {
+            $validationmessage = $validationmessage . $validationerror . '\n';
+        }
+        local_user_provisioning_scim_error_msg($validationmessage, 'invalidSyntax', 400);
+    }
+
+    if ($DB->get_record('user', array('username' => $validateuser->username))) {
+        $createrecord = 0;
+        local_user_provisioning_scim_error_msg(get_string('error:userexists', 'local_user_provisioning'), 'uniqueness', 409);
+    }
+
+    // Default required fields.
+    $validateuser->idnumber = local_user_provisioning_get_guid();
+    $validateuser->organisationid = $orgdetails->id;
+    $validateuser->firstaccess = 0;
+    $validateuser->mnethostid = 1;
+    $validateuser->timecreated = time();
+    $validateuser->secret = random_string(15);
+    $validateuser->calendartype = $CFG->calendartype;
+
+    if ($userid = user_create_user($validateuser, false, false)) {
+        $validateuser->id = $userid;
+        if ($validateuser->auth == 'manual') {
+            setnew_password_and_mail($validateuser);
+            set_user_preference('auth_forcepasswordchange', 1, $userid);
+        }
+        // Add User's job assignment.
+        local_user_provisioning_jobassignment($validateuser, 'add');
+
+        // Assign organisation manager to new user.
+        $usermanaging = new \local_catalystlms\user\organisation($validateuser);
+        $usermanaging->update_user_position_assignment();
+
+        // Custom user profile field - team.
+        $params['fieldid'] = 0;
+        if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+            $params['fieldid'] = $fieldid;
+        }
+
+        $sql = local_user_provisioning_get_userquerysql();
+        $sql .= " WHERE u.idnumber = :idnumber";
+
+        $params['organisationid'] = $validateuser->organisationid;
+        $params['idnumber'] = $validateuser->idnumber;
+
+        if ($record = $DB->get_record_sql($sql, $params)) {
+            $record->country = local_user_provisioning_get_country('code', $validateuser->country);
+            $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
+            $resp->send_response(201);
+        }
     }
 
 }

@@ -22,6 +22,8 @@
  */
 
 namespace local_user_provisioning;
+use moodle_url;
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
@@ -65,19 +67,20 @@ class scimuserresponse extends scimresponse {
      * @return array
      */
     protected function extra_data() : array {
+
         $managerid = '';
         $manager = '';
         $refurl = '';
         if ($this->user->managerid) {
             $managerid = $this->user->managerid;
             $manager = $this->user->managerfirstname . ' ' . $this->user->managerlastname;
-            $refurl = '../Users/' . $managerid;
+            $refurl = new moodle_url('/user/profile.php', array('id' => $managerid));
         }
         $returnvar = array(
             'id' => $this->user->idnumber,
             'externalId' => $this->user->idnumber,
             'userName' => $this->user->username,
-            'displayName' => $this->user->username,
+            'displayName' => $this->user->alternatename,
             'name' => array (
                 'givenName' => $this->user->firstname,
                 'familyName' => $this->user->lastname
