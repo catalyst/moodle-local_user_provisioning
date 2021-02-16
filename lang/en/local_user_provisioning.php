@@ -46,4 +46,5 @@ $string['error:missingusername'] = 'userName is missing in the request body';
 $string['error:missingfirstname'] = 'name.givenName is missing in the request body';
 $string['error:missinglastname'] = 'name.familyName is missing in the request body';
 $string['error:missingemail'] = 'emails.value is missing in the request body';
+$string['error:invalidauth'] = 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User auth not supported';
 $string['error:invalidmanager'] = 'Manager set for this user is invalid';

@@ -55,7 +55,7 @@ const PROFILE_FIELDS = [
         'positionid',
         'manager',
         'managerid',
-        'managerjaid'
+        'manageridnumber'
     ];
 
 ini_set('html_errors', false);
@@ -306,8 +306,8 @@ function local_user_provisioning_get_userquerysql() : string {
 
     return "SELECT distinct u.id, u.idnumber, u.username, u.alternatename, u.firstname, u.lastname, u.email,
                         u.lang, u.auth, u.department, u.city, u.country, u.suspended, u.timecreated, u.timemodified,
-                        uid.data AS team, p.fullname AS title,
-                        um.id AS managerid, um.firstname AS managerfirstname, um.lastname AS managerlastname
+                        uid.data AS team, p.fullname AS title, um.id AS managerid, um.idnumber AS manageridnumber,
+                        um.firstname AS managerfirstname, um.lastname AS managerlastname
               FROM {user} u
               JOIN (SELECT userid,
                            organisationid,
@@ -459,22 +459,38 @@ function local_user_provisioning_get_user($json, $idnumber) : void {
 }
 
 /**
+ * Validate Authentication.
+ *
+ * @param string $auth Authentication type.
+ * @return bool
+ */
+function local_user_provisioning_validate_auth(string $auth) : bool {
+    global $CFG;
+
+    $supportedauths = explode(',', $CFG->auth);
+
+    return in_array($auth, $supportedauths);
+}
+
+/**
  * Validate JSON data.
  *
  * @param array $json User data
  * @param string $action action = add / update
  * @param int $portalid Portal / Organisation ID
+ * @param object $user User object (empty if action = add)
  * @return object User details
  */
-function local_user_provisioning_validate_data(array $json, string $action, int $portalid) : object {
+function local_user_provisioning_validate_data(array $json, string $action, int $portalid, object $user) : object {
     global $DB;
 
-    $user = new stdClass();
     $validationerror = array();
 
-    // Define profile fields.
-    foreach (PROFILE_FIELDS as $profielfield) {
-        $user->$profielfield = '';
+    if ($action == 'add') {
+        // Define profile fields.
+        foreach (PROFILE_FIELDS as $profilefield) {
+            $user->$profilefield = '';
+        }
     }
 
     // Set profile fields values from the JSON.
@@ -557,10 +573,27 @@ function local_user_provisioning_validate_data(array $json, string $action, int 
             break;
             case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User':
                 if (is_array($value)) {
-                    if (!empty($value['manager'])) {
-                        $user->managerid = $value['manager']['value'];
+                    if (isset($value['manager'])) {
+                        $user->manageridnumber = $value['manager']['value'];
+                        if (empty($user->manageridnumber)) {
+                            $user->newmanagerjaid = '';
+                        } else {
+                            if ($usermanager = $DB->get_record('user', array('idnumber' => $user->manageridnumber,
+                                                'deleted' => 0))) {
+                                $managerjobassignment = job_assignment::get_first($usermanager->id);
+                                if ($portalid == $managerjobassignment->organisationid) {
+                                    $user->newmanager = fullname($usermanager);
+                                    $user->newmanagerid = $usermanager->id;
+                                    $user->newmanagerjaid = $managerjobassignment->id;
+                                } else {
+                                    $validationerror[] = get_string('error:invalidmanager', 'local_user_provisioning');
+                                }
+                            } else {
+                                $validationerror[] = get_string('error:invalidmanager', 'local_user_provisioning');
+                            }
+                        }
                     }
-                    if (!empty($value['department'])) {
+                    if (isset($value['department'])) {
                         $user->department = $value['department'];
                     }
                 }
@@ -576,9 +609,6 @@ function local_user_provisioning_validate_data(array $json, string $action, int 
     }
 
     // Validate profile fields.
-    if (empty($user->auth)) {
-        $user->auth = 'email';
-    }
     if (empty($user->suspended)) {
         $user->suspended = 0;
     }
@@ -594,17 +624,11 @@ function local_user_provisioning_validate_data(array $json, string $action, int 
     if (empty($user->email)) {
         $validationerror[] = get_string('error:missingemail', 'local_user_provisioning');
     }
-    if (!empty($user->managerid)) {
-        if ($usermanager = $DB->get_record('user', array('id' => $user->managerid, 'deleted' => 0))) {
-            $managerjobassignment = job_assignment::get_first($user->managerid);
-            if ($portalid == $managerjobassignment->organisationid) {
-                $user->newmanager = fullname($usermanager);
-                $user->newmanagerid = $user->managerid;
-                $user->newmanagerjaid = $managerjobassignment->id;
-            } else {
-                $validationerror[] = get_string('error:invalidmanager', 'local_user_provisioning');
-            }
-        }
+
+    if (empty($user->auth) && $action == 'add') {
+        $user->auth = 'email';
+    } else if (!local_user_provisioning_validate_auth($user->auth)) {
+        $validationerror[] = get_string('error:invalidauth', 'local_user_provisioning');
     }
 
     if (count($validationerror)) {
@@ -697,7 +721,7 @@ function local_user_provisioning_jobassignment(object $user, string $action) : v
     }
 
     // Manager.
-    if (isset($user->newmanagerid)) {
+    if (isset($user->newmanagerjaid)) {
         $jobassignmentdata['managerjaid'] = $user->newmanagerjaid;
     }
 
@@ -748,7 +772,7 @@ function local_user_provisioning_create_user(array $json) : void {
     // Get Organisation details.
     $orgdetails = local_user_provisioning_get_org_details();
 
-    $validateuser = local_user_provisioning_validate_data($json, 'add', $orgdetails->id);
+    $validateuser = local_user_provisioning_validate_data($json, 'add', $orgdetails->id, new stdClass());
 
     if (isset($validateuser->errors)) {
         $validationmessage = '';
@@ -774,7 +798,7 @@ function local_user_provisioning_create_user(array $json) : void {
 
     if ($userid = user_create_user($validateuser, false, false)) {
         $validateuser->id = $userid;
-        if ($validateuser->auth == 'manual') {
+        if ($validateuser->auth == 'manual' || $validateuser->auth == 'email') {
             setnew_password_and_mail($validateuser);
             set_user_preference('auth_forcepasswordchange', 1, $userid);
         }
@@ -802,6 +826,79 @@ function local_user_provisioning_create_user(array $json) : void {
             $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
             $resp->send_response(201);
         }
+    }
+
+}
+
+/**
+ * Update user details.
+ *
+ * @param array $json User details
+ * @param string $idnumber idnumber of the requested user update.
+ * @return void
+ */
+function local_user_provisioning_update_user(array $json, string $idnumber) : void {
+    global $DB;
+
+    // Validate the Bearer token.
+    local_user_provisioning_validatetoken();
+
+    // Get Organisation details.
+    $orgdetails = local_user_provisioning_get_org_details();
+
+    // Custom user profile field - team.
+    $params['fieldid'] = 0;
+    if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+        $params['fieldid'] = $fieldid;
+    }
+
+    $sql = local_user_provisioning_get_userquerysql();
+    $sql .= " WHERE u.idnumber = :idnumber";
+
+    $params['organisationid'] = $orgdetails->id;
+    $params['idnumber'] = $idnumber;
+
+    // Check if user exists.
+    if ($user = $DB->get_record_sql($sql, $params)) {
+        // Validate JSON data.
+        $validateuser = local_user_provisioning_validate_data($json, 'update', $orgdetails->id, $user);
+        $validateuser->organisationid = $orgdetails->id;
+
+        if (isset($validateuser->errors)) {
+            $validationmessage = '';
+            foreach ($validateuser->errors as $validationerror) {
+                $validationmessage = $validationmessage . $validationerror . '\n';
+            }
+            local_user_provisioning_scim_error_msg($validationmessage, 'invalidSyntax', 400);
+        }
+
+        if (!empty($validateuser->username) && $user->username !== $validateuser->username) {
+            if ($DB->get_record('user', array('username' => $validateuser->username))) {
+                local_user_provisioning_scim_error_msg(get_string('error:userexists', 'local_user_provisioning'),
+                    'uniqueness', 409);
+            }
+        }
+
+        user_update_user($validateuser, false, false); // Update user details.
+
+        // Update user job assignment.
+        if ($jobassignment = local_user_provisioning_jobassignment($validateuser, 'update')) {
+            foreach ($jobassignment as $key => $value) {
+                $user->$key = $value;
+            }
+        }
+
+        $sql = local_user_provisioning_get_userquerysql();
+        $sql .= " WHERE u.idnumber = :idnumber";
+
+        if ($record = $DB->get_record_sql($sql, $params)) {
+            $record->country = local_user_provisioning_get_country('code', $validateuser->country);
+            $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
+            $resp->send_response(200);
+        }
+
+    } else {
+        local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
     }
 
 }
