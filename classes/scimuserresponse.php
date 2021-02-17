@@ -22,6 +22,7 @@
  */
 
 namespace local_user_provisioning;
+use moodle_url;
 
 defined('MOODLE_INTERNAL') || die();
 

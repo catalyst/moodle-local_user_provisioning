@@ -57,6 +57,8 @@ $router->map('DELETE', '/v2/Users/[**:id]', 'local_user_provisioning_suspend_use
 $router->map('POST', '/v2/Users', 'local_user_provisioning_create_user');
 // Update user - PUT Request.
 $router->map('PUT', '/v2/Users/[**:id]', 'local_user_provisioning_update_user');
+// Update user set fields - PATCH Request.
+$router->map('PATCH', '/v2/Users/[**:id]', 'local_user_provisioning_update_userfields');
 
 /*
  * Match the route and decode the json. All target functions should accept json associative array as the
