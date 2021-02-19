@@ -761,6 +761,53 @@ function local_user_provisioning_get_guid() : string {
 }
 
 /**
+ * Add / Update user details for custom user profile field - team.
+ *
+ * @param int $userid
+ * @param string $team
+ * @return void
+ */
+function local_user_provisioning_team(int $userid, int $teamfieldid, string $team) : void {
+    global $DB;
+
+    if ($record = $DB->get_record('user_info_data', array('userid' => $userid, 'fieldid' => $teamfieldid))) {
+        $DB->set_field('user_info_data', 'data', $team, array('userid' => $userid, 'fieldid' => $teamfieldid));
+    } else {
+        $thisrecord = new stdClass();
+        $thisrecord->userid = $userid;
+        $thisrecord->fieldid = $teamfieldid;
+        $thisrecord->data = $team;
+        $DB->insert_record('user_info_data', $thisrecord);
+    }
+}
+
+/**
+ * Send SCIM response.
+ *
+ * @param string $additionalsql SQL
+ * @param array $sqlparams SQL params
+ * @param string $idnumber User idnumber
+ * @param int $responsecode HTTP Response Code
+ * @return void
+ */
+function local_user_provisioning_scimresponse(string $additionalsql, array $sqlparams, string $idnumber,
+                                                int $responsecode) : void {
+    global $DB;
+
+    $sql = local_user_provisioning_get_userquerysql();
+    $sql .= $additionalsql;
+
+    if ($record = $DB->get_record_sql($sql, $sqlparams)) {
+        $record->country = local_user_provisioning_get_country('code', $record->country);
+        $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
+        $resp->send_response($responsecode);
+    } else {
+        local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber),
+                get_string('error:notfound', 'local_user_provisioning'), 404);
+    }
+}
+
+/**
  * Updates user and assigns to organisation.
  *
  * @param array $json User details
@@ -816,19 +863,15 @@ function local_user_provisioning_create_user(array $json) : void {
         $params['fieldid'] = 0;
         if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
             $params['fieldid'] = $fieldid;
+            local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team); // Update custom profile field - Team.
         }
 
-        $sql = local_user_provisioning_get_userquerysql();
-        $sql .= " WHERE u.idnumber = :idnumber";
-
+        $additionalsql = " WHERE u.idnumber = :idnumber";
         $params['organisationid'] = $validateuser->organisationid;
         $params['idnumber'] = $validateuser->idnumber;
 
-        if ($record = $DB->get_record_sql($sql, $params)) {
-            $record->country = local_user_provisioning_get_country('code', $validateuser->country);
-            $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
-            $resp->send_response(201);
-        }
+        // Process SCIM Response.
+        local_user_provisioning_scimresponse($additionalsql, $params, $validateuser->idnumber, 201);
     }
 
 }
@@ -863,6 +906,7 @@ function local_user_provisioning_update_user(array $json, string $idnumber) : vo
 
     // Check if user exists.
     if ($user = $DB->get_record_sql($sql, $params)) {
+        $oldusername = $user->username;
         // Validate JSON data.
         $validateuser = local_user_provisioning_validate_data($json, 'update', $orgdetails->id, $user);
         $validateuser->organisationid = $orgdetails->id;
@@ -875,7 +919,7 @@ function local_user_provisioning_update_user(array $json, string $idnumber) : vo
             local_user_provisioning_scim_error_msg($validationmessage, 'invalidSyntax', 400);
         }
 
-        if (!empty($validateuser->username) && $user->username !== $validateuser->username) {
+        if (!empty($validateuser->username) && $oldusername !== $validateuser->username) {
             if ($DB->get_record('user', array('username' => $validateuser->username))) {
                 local_user_provisioning_scim_error_msg(get_string('error:userexists', 'local_user_provisioning'),
                     'uniqueness', 409);
@@ -884,6 +928,10 @@ function local_user_provisioning_update_user(array $json, string $idnumber) : vo
 
         user_update_user($validateuser, false, false); // Update user details.
 
+        // Update custom profile field - Team.
+        if ($fieldid) {
+            local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team);
+        }
         // Update user job assignment.
         if ($jobassignment = local_user_provisioning_jobassignment($validateuser, 'update')) {
             foreach ($jobassignment as $key => $value) {
@@ -891,15 +939,9 @@ function local_user_provisioning_update_user(array $json, string $idnumber) : vo
             }
         }
 
-        $sql = local_user_provisioning_get_userquerysql();
-        $sql .= " WHERE u.idnumber = :idnumber";
-
-        if ($record = $DB->get_record_sql($sql, $params)) {
-            $record->country = local_user_provisioning_get_country('code', $validateuser->country);
-            $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
-            $resp->send_response(200);
-        }
-
+        $additionalsql = " WHERE u.idnumber = :idnumber";
+        // Process SCIM Response.
+        local_user_provisioning_scimresponse($additionalsql, $params, $validateuser->idnumber, 200);
     } else {
         local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
     }
@@ -1099,17 +1141,17 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
 
         user_update_user($validateuser, false, false); // Update user details.
 
+        // Update custom profile field - Team.
+        if ($fieldid) {
+            local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team);
+        }
+
         // Update user job assignment.
         $jobassignment = local_user_provisioning_jobassignment($validateuser, 'update');
 
-        $sql = local_user_provisioning_get_userquerysql();
-        $sql .= " WHERE u.idnumber = :idnumber";
-
-        if ($record = $DB->get_record_sql($sql, $params)) {
-            $record->country = local_user_provisioning_get_country('code', $validateuser->country);
-            $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
-            $resp->send_response(200);
-        }
+        $additionalsql = " WHERE u.idnumber = :idnumber";
+        // Process SCIM Response.
+        local_user_provisioning_scimresponse($additionalsql, $params, $validateuser->idnumber, 200);
     } else {
         local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
     }
