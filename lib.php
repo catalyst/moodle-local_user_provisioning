@@ -1019,6 +1019,9 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                     case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department':
                         $user->department = $thisfieldvalue;
                     break;
+                    case 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User:team':
+                        $user->team = $thisfieldvalue;
+                    break;
                     case 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User:auth':
                         $user->auth = $thisfieldvalue;
                         if (!local_user_provisioning_validate_auth($user->auth)) {
