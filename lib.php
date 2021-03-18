@@ -763,12 +763,18 @@ function local_user_provisioning_get_guid() : string {
 /**
  * Add / Update user details for custom user profile field - team.
  *
- * @param int $userid
- * @param string $team
+ * @param int $userid User ID
+ * @param int $teamfieldid Team custom profile field ID
+ * @param string|null $team Team
  * @return void
  */
-function local_user_provisioning_team(int $userid, int $teamfieldid, string $team) : void {
+function local_user_provisioning_team(int $userid, int $teamfieldid, ?string $team) : void {
     global $DB;
+
+    // User profile data doesn't accept null values, change it to empty string.
+    if (is_null($team)) {
+        $team = '';
+    }
 
     if ($record = $DB->get_record('user_info_data', array('userid' => $userid, 'fieldid' => $teamfieldid))) {
         $DB->set_field('user_info_data', 'data', $team, array('userid' => $userid, 'fieldid' => $teamfieldid));
@@ -842,6 +848,7 @@ function local_user_provisioning_create_user(array $json) : void {
     $validateuser->organisationid = $orgdetails->id;
     $validateuser->firstaccess = 0;
     $validateuser->mnethostid = 1;
+    $validateuser->confirmed = 1;
     $validateuser->timecreated = time();
     $validateuser->secret = random_string(15);
     $validateuser->calendartype = $CFG->calendartype;
@@ -1060,7 +1067,7 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         }
                     break;
                     case 'active':
-                        $user->suspended = $thisfieldvalue;
+                        $user->suspended = local_user_provisioning_isactive($thisfieldvalue);
                     break;
                     case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager':
                         $user->manageridnumber = $thisfieldvalue;
