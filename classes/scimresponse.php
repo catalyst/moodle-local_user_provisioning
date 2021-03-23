@@ -53,8 +53,6 @@ abstract class scimresponse {
     const TIMECREATED = '2021-01-27T12:00:00Z';
     // Date/time the schema was modified.
     const TIMEMODIFIED = '2021-01-27T12:00:00Z';
-    // SCIM API base URL.
-    const SCIM2_BASE_URL = '/local/user_provisioning/scim/rest.php';
     // Max records to send for user filters.
     const SCIM2_FILTERMAXRECORDS = 25;
 

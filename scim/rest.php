@@ -30,7 +30,7 @@ require_once('lib/AltoRouter.php');
 require_once('../lib.php');
 
 $router = new \AltoRouter();
-$router->setBasePath(scimserviceconfigresponse::SCIM2_BASE_URL);
+$router->setBasePath(SCIM2_BASE_URL);
 
 // Routes.
 // Generate Bearer token.
@@ -68,7 +68,9 @@ $match = $router->match();
 
 $target = __NAMESPACE__ . '\\' . $match['target'];
 
+// Check if there's route matched and the method can be called.
 if ($match && is_callable($target)) {
+    // Validate the JSON body content and token if route anything other than `/v2/token`.
     if ($target !== 'local_user_provisioning\local_user_provisioning_token') {
         $body = file_get_contents('php://input');
         if ($body) {
@@ -80,6 +82,8 @@ if ($match && is_callable($target)) {
         } else {
             $data = array();
         }
+        // Validate the Bearer token.
+        local_user_provisioning_validatetoken();
     }
     call_user_func_array($target, array_merge(array($data), $match['params']));
 } else {

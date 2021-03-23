@@ -46,7 +46,7 @@ class scimcustschemaconfigresponse extends scimresponse {
     public function extra_data() : array {
         global $CFG;
 
-        $locationurl = $CFG->wwwroot . static::SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
+        $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
 
         return array(
             "id" => static::SCIM2_CUSTOM_USER_URN,

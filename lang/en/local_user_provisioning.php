@@ -25,6 +25,8 @@ $string['pluginname'] = 'SCIM User Provisioning - Bearer token';
 
 $string['oauth2bearer'] = 'OAuth Bearer Token';
 $string['oauth2bearer_desc'] = 'Authentication scheme using the OAuth Bearer Token Standard 2.0';
+$string['httpbasic'] = 'HTTP Basic';
+$string['httpbasic_desc'] = 'Authentication scheme using the HTTP Basic Standard';
 
 // Error...
 $string['error:badrequest'] = 'Bad Request'; // Error code 400.

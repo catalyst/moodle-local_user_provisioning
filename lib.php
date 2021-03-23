@@ -36,7 +36,10 @@ if (!defined('USERPROFILEFIELDTEAM')) {
 if (!defined('SCIM2_PATCHOP_URN')) {
     define('SCIM2_PATCHOP_URN', 'urn:ietf:params:scim:api:messages:2.0:PatchOp');
 }
-
+// SCIM API base URL.
+if (!defined('SCIM2_BASE_URL')) {
+    define('SCIM2_BASE_URL', '/local/user_provisioning/scim/rest.php');
+}
 /*
  * PROFILE_FIELDS array
  *
@@ -151,8 +154,6 @@ function local_user_provisioning_validatetoken() : void {
  * @return void
  */
 function local_user_provisioning_get_schemas() : void {
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
 
     $resp = new scimschemaconfigresponse('Schemas');
     $resp->send_response(200);
@@ -163,8 +164,6 @@ function local_user_provisioning_get_schemas() : void {
  * @return JSON
  */
 function local_user_provisioning_get_entuserschema() : void {
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
 
     $resp = new scimentschemaconfigresponse('UserEnterpriseSchema');
     $resp->send_response(200);
@@ -175,8 +174,6 @@ function local_user_provisioning_get_entuserschema() : void {
  * @return JSON
  */
 function local_user_provisioning_get_userschema() : void {
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
 
     $resp = new scimuserschemaconfigresponse('UserSchema');
     $resp->send_response(200);
@@ -187,8 +184,6 @@ function local_user_provisioning_get_userschema() : void {
  * @return JSON
  */
 function local_user_provisioning_get_custuserschema() : void {
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
 
     $resp = new scimcustschemaconfigresponse('UserCustomSchema');
     $resp->send_response(200);
@@ -199,8 +194,6 @@ function local_user_provisioning_get_custuserschema() : void {
  * @return void
  */
 function local_user_provisioning_get_serviceproviderconfig() : void {
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
 
     $resp = new scimserviceconfigresponse('ServiceConfig');
     $resp->send_response(200);
@@ -256,27 +249,47 @@ function local_user_provisioning_get_bearertoken() : ? string {
 /**
  * Returns what org the user should be under based on the Bearer token.
  *
+ * @param string $auth Authentication.
  * @return object $orgdetails contains the organisation's id and shortname.
  */
-function local_user_provisioning_get_org_details() : object {
+function local_user_provisioning_get_org_details(string $auth = 'oauthbearertoken') : object {
     global $DB;
 
-    $bearertoken = local_user_provisioning_get_bearertoken();
-    if (!$bearertoken) {
-        local_user_provisioning_scim_error_msg(get_string('error:unauthorized_help', 'local_user_provisioning'),
-            get_string('error:unauthorized', 'local_user_provisioning'), 401);
-    }
+    switch ($auth) {
+        case 'httpbasic':
+            $authusername = $_SERVER['PHP_AUTH_USER'] ?? null;
+            if (!$authusername) {
+                local_user_provisioning_scim_error_msg(get_string('error:unauthorized_help', 'local_user_provisioning'),
+                    get_string('error:unauthorized', 'local_user_provisioning'), 401);
+            }
 
-    $sql = 'SELECT org.id, org.shortname
-              FROM {org} org
-              JOIN {oauth_access_tokens} oat ON org.shortname = oat.client_id
-             WHERE oat.access_token = :bearertoken
-               AND oat.scope = :scope';
-    $params = [
-        'bearertoken' => $bearertoken,
-        'scope' => 'SCIMv2'
-    ];
-    $orgdetails = $DB->get_record_sql($sql, $params);
+            $sql = 'SELECT org.id, org.shortname
+                      FROM {org} org
+                     WHERE LOWER(org.shortname) = LOWER(:authusername)';
+            $params = [
+                'authusername' => $authusername
+            ];
+            $orgdetails = $DB->get_record_sql($sql, $params);
+        break;
+        default:
+            $bearertoken = local_user_provisioning_get_bearertoken();
+            if (!$bearertoken) {
+                local_user_provisioning_scim_error_msg(get_string('error:unauthorized_help', 'local_user_provisioning'),
+                    get_string('error:unauthorized', 'local_user_provisioning'), 401);
+            }
+
+            $sql = 'SELECT org.id, org.shortname
+                      FROM {org} org
+                      JOIN {oauth_access_tokens} oat ON org.shortname = oat.client_id
+                     WHERE oat.access_token = :bearertoken
+                       AND oat.scope = :scope';
+            $params = [
+                'bearertoken' => $bearertoken,
+                'scope' => 'SCIMv2'
+            ];
+            $orgdetails = $DB->get_record_sql($sql, $params);
+        break;
+    }
 
     if ($orgdetails) {
         return $orgdetails;
@@ -329,16 +342,16 @@ function local_user_provisioning_get_userquerysql() : string {
 
 /**
  * Filter users
+ *
+ * @param $json array
+ * @param $auth string Authentication
  * @return void
  */
-function local_user_provisioning_get_users() : void {
+function local_user_provisioning_get_users(array $json, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
-
     // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details();
+    $orgdetails = local_user_provisioning_get_org_details($auth);
 
     $extrasql = '';
     $invalidfilter = false;
@@ -425,17 +438,15 @@ function local_user_provisioning_get_users() : void {
  * Get given user details.
  *
  * @param array $json this isn't used but must be here because the idnumber is passed as the second parameter.
- * @param int $idnumber User idnumber of the requested user.
+ * @param string $idnumber User idnumber of the requested user.
+ * @param string $auth Authentication
  * @return void
  */
-function local_user_provisioning_get_user($json, $idnumber) : void {
+function local_user_provisioning_get_user(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
-
     // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details();
+    $orgdetails = local_user_provisioning_get_org_details($auth);
 
     // Custom user profile field - team.
     $params['fieldid'] = 0;
@@ -817,16 +828,14 @@ function local_user_provisioning_scimresponse(string $additionalsql, array $sqlp
  * Updates user and assigns to organisation.
  *
  * @param array $json User details
+ * @param string $auth Authentication.
  * @return void
  */
-function local_user_provisioning_create_user(array $json) : void {
+function local_user_provisioning_create_user(array $json, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
-
     // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details();
+    $orgdetails = local_user_provisioning_get_org_details($auth);
 
     $validateuser = local_user_provisioning_validate_data($json, 'add', $orgdetails->id, new stdClass());
 
@@ -888,16 +897,14 @@ function local_user_provisioning_create_user(array $json) : void {
  *
  * @param array $json User details
  * @param string $idnumber idnumber of the requested user update.
+ * @param string $auth Authentication.
  * @return void
  */
-function local_user_provisioning_update_user(array $json, string $idnumber) : void {
+function local_user_provisioning_update_user(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
-
     // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details();
+    $orgdetails = local_user_provisioning_get_org_details($auth);
 
     // Custom user profile field - team.
     $params['fieldid'] = 0;
@@ -1105,15 +1112,14 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
  *
  * @param array $json User details
  * @param string $idnumber idnumber of the requested user update.
+ * @param string $auth Authentication.
+ * @return void
  */
-function local_user_provisioning_update_userfields(array $json, string $idnumber) : void {
+function local_user_provisioning_update_userfields(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
-
     // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details();
+    $orgdetails = local_user_provisioning_get_org_details($auth);
 
     // Custom user profile field - team.
     $params['fieldid'] = 0;
@@ -1173,16 +1179,14 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
  *
  * @param array $json this isn't used but must be here because the idnumber is passed as the second parameter.
  * @param string $idnumber User idnumber of the requested user.
+ * @param string $auth Authentication.
  * @return void
  */
-function local_user_provisioning_suspend_user(array $json, string $idnumber) : void {
+function local_user_provisioning_suspend_user(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Validate the Bearer token.
-    local_user_provisioning_validatetoken();
-
     // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details();
+    $orgdetails = local_user_provisioning_get_org_details($auth);
 
     $sql = "SELECT u.id
               FROM {user} u

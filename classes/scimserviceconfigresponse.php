@@ -32,10 +32,12 @@ class scimserviceconfigresponse extends scimresponse {
     /**
      * User Schema constructor.
      *
-     * @param $type string
+     * @param $type string Scheme response type
+     * @param $auth Authentication
      **/
-    public function __construct($type) {
+    public function __construct(string $type, string $auth = 'oauthbearertoken') {
         $this->set_response_type($type);
+        $this->auth = $auth;
     }
 
     /**
@@ -46,7 +48,7 @@ class scimserviceconfigresponse extends scimresponse {
     protected function extra_data() : array {
         global $CFG;
 
-        $locationurl = $CFG->wwwroot . static::SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/ServiceProviderConfigs';
+        $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/ServiceProviderConfigs';
 
         return array(
             'patch' => array(
@@ -69,14 +71,7 @@ class scimserviceconfigresponse extends scimresponse {
                 'supported' => false
             ),
             'authenticationSchemes' => array(
-                array(
-                    'name' => get_string('oauth2bearer', 'local_user_provisioning'),
-                    'description' => get_string('oauth2bearer_desc', 'local_user_provisioning'),
-                    'specUri' => 'https://www.rfc-editor.org/info/rfc6750',
-                    'documentationUri' => 'https://en.wikipedia.org/wiki/OAuth#OAuth_2.0_2',
-                    'type' => 'oauthbearertoken',
-                    "primary" => true
-                )
+                $this->get_meta($this->auth)
             ),
             'meta' => array(
                 'location' => $locationurl,
@@ -88,4 +83,33 @@ class scimserviceconfigresponse extends scimresponse {
         );
     }
 
+    /**
+     * Return metadata as part of this SCIM response.
+     *
+     * @param $auth string Authentication
+     * @return array
+     */
+    protected function get_meta(string $auth) : array {
+        switch ($auth) {
+            case 'httpbasic':
+                return array(
+                    'name' => get_string('httpbasic', 'local_user_provisioning'),
+                    'description' => get_string('httpbasic_desc', 'local_user_provisioning'),
+                    'specUri' => 'http://www.rfc-editor.org/info/rfc2617',
+                    'documentationUri' => 'https://en.wikipedia.org/wiki/Basic_access_authentication',
+                    'type' => 'httpbasic'
+                );
+            break;
+            default:
+                return array(
+                    'name' => get_string('oauth2bearer', 'local_user_provisioning'),
+                    'description' => get_string('oauth2bearer_desc', 'local_user_provisioning'),
+                    'specUri' => 'https://www.rfc-editor.org/info/rfc6750',
+                    'documentationUri' => 'https://en.wikipedia.org/wiki/OAuth#OAuth_2.0_2',
+                    'type' => 'oauthbearertoken',
+                    "primary" => true
+                );
+            break;
+        }
+    }
 }
