@@ -22,12 +22,21 @@
  */
 
 $string['pluginname'] = 'SCIM User Provisioning - Bearer token';
-
+$string['enabled_debug'] = 'Debugging Enabled';
+$string['enabled_desc'] = 'Enable Debugging for User Provisioning';
+$string['debug_email_address'] = 'Debug email address';
+$string['debug_email_address_default'] = 'jonathan';
+$string['debug_email_desc'] = 'Recipient email address for debug information (mandatory if debugging enabled)';
+$string['email_subject'] = 'Local_User_Provisioning API debugging Email';
+$string['email_body_text1'] = 'PATH INFO = ';
+$string['email_body_text2'] = 'REQUEST URI = ';
+$string['email_body_text3'] = 'QUERY STRING = ';
+$string['email_body_text4'] = 'REQUEST METHOD = ';
+$string['email_body_text5'] = 'API JSON = ';
 $string['oauth2bearer'] = 'OAuth Bearer Token';
 $string['oauth2bearer_desc'] = 'Authentication scheme using the OAuth Bearer Token Standard 2.0';
 $string['httpbasic'] = 'HTTP Basic';
 $string['httpbasic_desc'] = 'Authentication scheme using the HTTP Basic Standard';
-
 // Error...
 $string['error:badrequest'] = 'Bad Request'; // Error code 400.
 $string['error:badrequest_help'] = 'Request is unparsable, syntactically incorrect, or violates schema.';

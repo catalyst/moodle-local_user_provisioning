@@ -23,6 +23,8 @@
 
 namespace local_user_provisioning;
 
+use core_user\userdata\email;
+
 define('AJAX_SCRIPT', true);
 
 require_once('../../../config.php');
@@ -73,6 +75,27 @@ if ($match && is_callable($target)) {
     // Validate the JSON body content and token if route anything other than `/v2/token`.
     if ($target !== 'local_user_provisioning\local_user_provisioning_token') {
         $body = file_get_contents('php://input');
+        /*
+        * If debugging is enabled send an email to the email specified in
+        * plugin settings under local_user_provisioning/debug_email with the following information
+        * about the API call.
+        * PATH_INFO (API URL called)
+        * QUERY_STRING
+        * REQUEST_METHOD
+        * Body content (API JSON for Post and Put requests)
+        */
+        $debugemail = get_config('local_user_provisioning', 'debug_email');
+        if (get_config('local_user_provisioning', 'enabled_debug') == true && validate_email($debugemail) == true) {
+            $sendingemail = $recipientemail = \core_user::get_support_user();
+            $recipientemail->email = $debugemail;
+            $subject = get_string('email_subject', 'local_user_provisioning');
+            $emailbody = get_string('email_body_text1', 'local_user_provisioning') . $_SERVER['PATH_INFO']
+                . "\n" . get_string('email_body_text2', 'local_user_provisioning') . $_SERVER['REQUEST_URI']
+                . "\n" . get_string('email_body_text3', 'local_user_provisioning') . $_SERVER['QUERY_STRING']
+                . "\n" . get_string('email_body_text4', 'local_user_provisioning') . $_SERVER['REQUEST_METHOD']
+                . "\n" . get_string('email_body_text5', 'local_user_provisioning') . $body;
+            email_to_user($recipientemail, $sendingemail, $subject, $emailbody);
+        }
         if ($body) {
             $data = json_decode($body, true);
             if (json_last_error()) {
