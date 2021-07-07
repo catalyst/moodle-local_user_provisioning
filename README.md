@@ -25,6 +25,31 @@ e.g. If we are creating a Client secret key for Organisation `MSI Reproductive C
 * Scope: should be set to `SCIMv2`
 * User ID: should be set to `0`
 
+### The URL for Azure AD user provisioning is:
+`https://{siteurl}/local/user_provisioning/scim/rest.php/v2`
+
+The client will have to create two Custom extention attribues for `Team` and `Auth`
+
+### Field mapping of Kaya to Azure AD are as follows:
+
+* idnumber : id (Azure AD - unique identifier)
+* Username : userName
+* Firstname : name.givenName
+* Lastname : name.familyName
+* Email address : emails.value (Type = Work AND primary = True)
+* Alternate name : displayName
+* Preferred language : preferredLanguage
+* City : addresses.locality (Type = Work AND primary = True)
+* Country : addresses.country (Type = Work AND primary = True)
+* Position : title
+* Suspended : active
+* Manager : urn:ietf:params:scim:schemas:extension:enterprise:2.0:User manager.value
+* Department : urn:ietf:params:scim:schemas:extension:enterprise:2.0:User department
+* Authentication : urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User auth
+* Team : urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User team
+
+Schemas endpoint provides a fair representation of Azure AD fields.
+
 ### Generate a Long-lived bearer token:
 
 
@@ -36,12 +61,12 @@ curl https://{siteurl}/local/user_provisioning/scim/rest.php/v2/token -d 'grant_
 
 Where CLIENT_ID is the Client identifier and the CLIENT_SECRET is the key generated when adding a new client as part of `Add Client identifier`
 
-####  `/ServiceProviderConfig` - To view the SCIM service provider config.
+#### `/ServiceProviderConfig` - To view the SCIM service provider config.
 
 curl --location --request GET 'https://{SITE_URL}/local/user_provisioning/scim/rest.php/v2/ServiceProviderConfig' \
 --header 'Authorization: Bearer {BEARER_TOKEN}'
 
-####  /Schemas` - To view the SCIM schemas that are used. Append following to view the individual User, Enterprise and Custom extention schema:
+#### /Schemas` - To view the SCIM schemas that are used. Append following to view the individual User, Enterprise and Custom extention schema:
 
 * urn:ietf:params:scim:schemas:core:2.0:User
 * urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
@@ -76,27 +101,36 @@ curl --location --request POST 'https://{SITE_URL}/local/user_provisioning/scim/
 --header 'Authorization: Bearer {BEARER_TOKEN}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-    "schemas": [
-        "urn:ietf:params:scim:schemas:core:2.0:User",
-        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
-    ],
-    "userName": "catalyst1@testmsi365.onmicrosoft.com",
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User", "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],
+    "externalId": "XXXXXXXX",
+    "userName": "catalyst.admin@catalyst-eu.net",
     "active": true,
-    "displayName": "Catalyst One",
-    "emails": [
-        {
-            "primary": true,
-            "type": "work",
-            "value": "bitsprintuk+catalyst1@gmail.com"
-        }
-    ],
-    "meta": {
-        "resourceType": "User"
-    },
+    "addresses": [{
+        "type": "work",
+        "country": "United Kingdom",
+        "locality": "Brighton"
+    }],
+    "displayName": "Catalyst Admin",
+    "emails": [{
+        "primary": true,
+        "type": "work",
+        "value": "catalyst.admin@catalyst-eu.net"
+    }],
     "name": {
-        "familyName": "One",
-        "givenName": "Catalyst"
+        "familyName": "Catalyst",
+        "givenName": "Admin"
     },
+    "title": "Site Administrator",
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+        "department": "Internet Technologist",
+        "manager": {
+            "value": ""
+        }
+    },
+    "urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User": {
+        "auth": "saml2",
+        "team": "IT"
+    }
 }'
 
 #### `/Users` - PATCH request to update given user's data.
