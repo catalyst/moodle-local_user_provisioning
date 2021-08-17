@@ -639,11 +639,8 @@ function local_user_provisioning_validate_data(array $json, string $action, int 
         $validationerror[] = get_string('error:missingemail', 'local_user_provisioning');
     }
 
-    if (empty($user->auth) && $action == 'add') {
-        $user->auth = 'email';
-    } else if (!local_user_provisioning_validate_auth($user->auth)) {
-        $validationerror[] = get_string('error:invalidauth', 'local_user_provisioning');
-    }
+    // Portal organisations using User Provisioning API will be using 'saml2' authentication.
+    $user->auth = 'saml2';
 
     if (count($validationerror)) {
         $user->errors = $validationerror;
