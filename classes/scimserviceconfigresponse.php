@@ -58,8 +58,7 @@ class scimserviceconfigresponse extends scimresponse {
                 'supported' => false
             ),
             'filter' => array(
-                'supported' => true,
-                'maxResults' => static::SCIM2_FILTERMAXRECORDS
+                'supported' => true
             ),
             'changePassword' => array(
                 'supported' => false

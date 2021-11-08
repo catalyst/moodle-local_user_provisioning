@@ -53,8 +53,6 @@ abstract class scimresponse {
     const TIMECREATED = '2021-01-27T12:00:00Z';
     // Date/time the schema was modified.
     const TIMEMODIFIED = '2021-01-27T12:00:00Z';
-    // Max records to send for user filters.
-    const SCIM2_FILTERMAXRECORDS = 25;
 
     // An array of strings which are the schemas used in the json response - @var array[string] $schemas.
     private $schemas = array();

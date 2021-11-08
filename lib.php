@@ -27,9 +27,6 @@ use totara_job\job_assignment;
 
 defined('MOODLE_INTERNAL') || die();
 
-if (!defined('SCIM2_FILTERMAXRECORDS')) {
-    define('SCIM2_FILTERMAXRECORDS', 25);
-}
 if (!defined('USERPROFILEFIELDTEAM')) {
     define('USERPROFILEFIELDTEAM', 'team');
 }
@@ -419,10 +416,9 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
         }
 
         $sql = local_user_provisioning_get_userquerysql();
-        $sql .= $extrasql . " ORDER BY u.id LIMIT :rowcount";
+        $sql .= $extrasql . " ORDER BY u.id";
 
         $params['organisationid'] = $orgdetails->id;
-        $params['rowcount'] = SCIM2_FILTERMAXRECORDS;
 
         $records = $DB->get_records_sql($sql, $params);
         foreach ($records as $record) {
