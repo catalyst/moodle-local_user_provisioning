@@ -103,12 +103,12 @@ if ($match && is_callable($target)) {
                     get_string('error:badrequest', 'local_user_provisioning'), 400);
             }
         } else {
-            $data = array();
+            $data = [];
         }
         // Validate the Bearer token.
         local_user_provisioning_validatetoken();
     }
-    call_user_func_array($target, array_merge(array($data), $match['params']));
+    call_user_func_array($target, array_merge([$data], array_values($match['params'])));
 } else {
     local_user_provisioning_scim_error_msg(get_string('error:invaliduri', 'local_user_provisioning'), '?', 404);
 }

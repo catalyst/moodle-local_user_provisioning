@@ -46,16 +46,14 @@ class scimschemaconfigresponse extends scimresponse {
     protected function extra_data() : array {
         global $CFG;
 
-        $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
-
         return array(
             "totalResults" => 3,
             "itemsPerPage" => 3,
             "startIndex" => 1,
             "Resources" => array(
-                scimuserschemaconfigresponse::extra_data(),
-                scimentschemaconfigresponse::extra_data(),
-                scimcustschemaconfigresponse::extra_data()
+                scimuserschemaconfigresponse::get_extra_data(),
+                scimentschemaconfigresponse::get_extra_data(),
+                scimcustschemaconfigresponse::get_extra_data()
             )
         );
     }

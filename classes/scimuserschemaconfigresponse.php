@@ -44,6 +44,15 @@ class scimuserschemaconfigresponse extends scimresponse {
      * @return array
      */
     public function extra_data() : array {
+        return self::get_extra_data();
+    }
+
+    /**
+     * Gets the custom fields used in the response,
+     *
+     * @return array
+     */
+    public static function get_extra_data() : array {
         global $CFG;
 
         $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
@@ -65,7 +74,7 @@ class scimuserschemaconfigresponse extends scimresponse {
      *
      * @return array
      */
-    public function get_userattributes() : array {
+    public static function get_userattributes() : array {
 
         return array(
             array(
