@@ -88,14 +88,17 @@ class scimuserresponse extends scimresponse {
             'emails' => array(
                             array(
                                 'value' => $this->user->email,
-                                'type' => 'work'
+                                'type' => 'work',
+                                'primary' => true
                             )
                         ),
             'preferredLanguage' => $this->user->lang,
             'addresses' => array(
                                 array(
                                     'locality' => $this->user->city,
-                                    'country' => $this->user->country
+                                    'country' => $this->user->country,
+                                    'type' => 'work',
+                                    'primary' => true
                                 )
                             ),
             'title' => $this->user->title,

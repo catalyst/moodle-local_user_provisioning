@@ -106,6 +106,7 @@ curl --location --request POST 'https://{SITE_URL}/local/user_provisioning/scim/
     "userName": "catalyst.admin@catalyst-eu.net",
     "active": true,
     "addresses": [{
+        "primary": true,
         "type": "work",
         "country": "United Kingdom",
         "locality": "Brighton"
