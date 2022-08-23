@@ -568,7 +568,7 @@ function local_user_provisioning_validate_data(array $json, string $action, int 
                                 $user->city = $thisarray['locality'];
                             }
                             if (isset($thisarray['country']) && (!empty($thisarray['country']))) {
-                                $user->country = local_user_provisioning_get_country('country', $thisarray['country']);
+                                $user->country = local_user_provisioning_get_country_code($thisarray['country']);
                             }
                         }
                     }
@@ -643,6 +643,32 @@ function local_user_provisioning_validate_data(array $json, string $action, int 
     }
 
     return $user;
+}
+
+/**
+ * Validate value passed, return country code if found or return empty string.
+ *
+ * @param string $country - country / country code
+ * @return string Country code / blank string if not found.
+ */
+function local_user_provisioning_get_country_code(string $country) : string {
+    $getcountryby = (strlen($country) == 2) ? 'code' : 'country';
+    $countries = \get_string_manager()->get_list_of_countries(true);
+    foreach ($countries as $key => $value) {
+        switch ($getcountryby) {
+            case 'country':
+                if ($value == $country) {
+                    return $key;
+                }
+            break;
+            case 'code':
+                if ($key == $country) {
+                    return $key;
+                }
+            break;
+        }
+    }
+    return '';
 }
 
 /**
@@ -1063,7 +1089,7 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         if (empty($thisfieldvalue)) {
                             $user->country = '';
                         } else {
-                            $user->country = local_user_provisioning_get_country('country', $thisfieldvalue);
+                            $user->country = local_user_provisioning_get_country_code($thisfieldvalue);
                         }
                     break;
                     case 'active':
