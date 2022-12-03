@@ -25,4 +25,6 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_user_provisioning';
 $plugin->version = 2021012700;
-$plugin->requires = 2015051100;
+$plugin->requires = 2020061518; // Moodle 3.9
+$plugin->maturity  = MATURITY_ALPHA;
+$plugin->supported = [39, 401];     // A range of branch numbers of supported moodle versions.
