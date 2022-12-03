@@ -22,8 +22,9 @@
  */
 
 namespace local_user_provisioning;
+
+use null_parser_processor;
 use \stdClass;
-use totara_job\job_assignment;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -62,7 +63,6 @@ const PROFILE_FIELDS = [
     ];
 
 ini_set('html_errors', false);
-require_once($CFG->dirroot . '/totara/hierarchy/lib.php');
 require_once($CFG->dirroot . '/user/lib.php');
 
 /**
@@ -244,59 +244,6 @@ function local_user_provisioning_get_bearertoken() : ? string {
 }
 
 /**
- * Returns what org the user should be under based on the Bearer token.
- *
- * @param string $auth Authentication.
- * @return object $orgdetails contains the organisation's id and shortname.
- */
-function local_user_provisioning_get_org_details(string $auth = 'oauthbearertoken') : object {
-    global $DB;
-
-    switch ($auth) {
-        case 'httpbasic':
-            $authusername = $_SERVER['PHP_AUTH_USER'] ?? null;
-            if (!$authusername) {
-                local_user_provisioning_scim_error_msg(get_string('error:unauthorized_help', 'local_user_provisioning'),
-                    get_string('error:unauthorized', 'local_user_provisioning'), 401);
-            }
-
-            $sql = 'SELECT org.id, org.shortname
-                      FROM {org} org
-                     WHERE LOWER(org.shortname) = LOWER(:authusername)';
-            $params = [
-                'authusername' => $authusername
-            ];
-            $orgdetails = $DB->get_record_sql($sql, $params);
-        break;
-        default:
-            $bearertoken = local_user_provisioning_get_bearertoken();
-            if (!$bearertoken) {
-                local_user_provisioning_scim_error_msg(get_string('error:unauthorized_help', 'local_user_provisioning'),
-                    get_string('error:unauthorized', 'local_user_provisioning'), 401);
-            }
-
-            $sql = 'SELECT org.id, org.shortname
-                      FROM {org} org
-                      JOIN {oauth_access_tokens} oat ON org.shortname = oat.client_id
-                     WHERE oat.access_token = :bearertoken
-                       AND oat.scope = :scope';
-            $params = [
-                'bearertoken' => $bearertoken,
-                'scope' => 'SCIMv2'
-            ];
-            $orgdetails = $DB->get_record_sql($sql, $params);
-        break;
-    }
-
-    if ($orgdetails) {
-        return $orgdetails;
-    } else {
-        local_user_provisioning_scim_error_msg(get_string('error:forbidden_help', 'local_user_provisioning'),
-            get_string('error:forbidden', 'local_user_provisioning'), 403);
-    }
-}
-
-/**
  * Change int value to true or false.
  *
  * @param ini Suspended
@@ -319,21 +266,8 @@ function local_user_provisioning_get_userquerysql() : string {
 
     return "SELECT distinct u.id, u.idnumber, u.username, u.alternatename, u.firstname, u.lastname, u.email,
                         u.lang, u.auth, u.department, u.city, u.country, u.suspended, u.timecreated, u.timemodified,
-                        uid.data AS team, p.fullname AS title, um.id AS managerid, um.idnumber AS manageridnumber,
-                        um.firstname AS managerfirstname, um.lastname AS managerlastname
+                        uid.data AS team, p.fullname AS title
               FROM {user} u
-              JOIN (SELECT userid,
-                           organisationid,
-                           managerjaid,
-                           positionid
-                      FROM (SELECT DISTINCT ON (userid) *
-                              FROM {job_assignment}
-                          ORDER BY userid, sortorder ASC
-                            ) t
-                  ORDER BY sortorder ASC) AS tt ON u.id = tt.userid AND tt.organisationid = :organisationid
-              LEFT JOIN {job_assignment} ja ON tt.managerjaid = ja.id
-              LEFT JOIN {pos} p ON tt.positionid = p.id
-              LEFT JOIN {user} um ON ja.userid = um.id
               LEFT JOIN {user_info_data} uid ON u.id = uid.userid AND fieldid = :fieldid";
 }
 
@@ -346,9 +280,6 @@ function local_user_provisioning_get_userquerysql() : string {
  */
 function local_user_provisioning_get_users(array $json, string $auth = 'oauthbearertoken') : void {
     global $DB;
-
-    // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details($auth);
 
     $extrasql = '';
     $invalidfilter = false;
@@ -418,8 +349,6 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
         $sql = local_user_provisioning_get_userquerysql();
         $sql .= $extrasql . " ORDER BY u.id";
 
-        $params['organisationid'] = $orgdetails->id;
-
         $records = $DB->get_records_sql($sql, $params);
         foreach ($records as $record) {
             $resources[] = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), false);
@@ -441,9 +370,6 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
 function local_user_provisioning_get_user(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details($auth);
-
     // Custom user profile field - team.
     $params['fieldid'] = 0;
     if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
@@ -454,7 +380,6 @@ function local_user_provisioning_get_user(array $json, string $idnumber, string 
     $sql .= " WHERE u.suspended = :suspended
                 AND u.idnumber = :idnumber";
 
-    $params['organisationid'] = $orgdetails->id;
     $params['suspended'] = 0;
     $params['idnumber'] = $idnumber;
 
@@ -583,26 +508,6 @@ function local_user_provisioning_validate_data(array $json, string $action, int 
             break;
             case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User':
                 if (is_array($value)) {
-                    if (isset($value['manager'])) {
-                        $user->manageridnumber = $value['manager']['value'];
-                        if (empty($user->manageridnumber)) {
-                            $user->newmanagerjaid = '';
-                        } else {
-                            if ($usermanager = $DB->get_record('user', array('idnumber' => $user->manageridnumber,
-                                                'deleted' => 0))) {
-                                $managerjobassignment = job_assignment::get_first($usermanager->id);
-                                if ($portalid == $managerjobassignment->organisationid) {
-                                    $user->newmanager = fullname($usermanager);
-                                    $user->newmanagerid = $usermanager->id;
-                                    $user->newmanagerjaid = $managerjobassignment->id;
-                                } else {
-                                    $validationerror[] = get_string('error:invalidmanager', 'local_user_provisioning');
-                                }
-                            } else {
-                                $validationerror[] = get_string('error:invalidmanager', 'local_user_provisioning');
-                            }
-                        }
-                    }
                     if (isset($value['department'])) {
                         $user->department = $value['department'];
                     }
@@ -730,42 +635,6 @@ function local_user_provisioning_addpos(int $organisationid, string $position, i
     return false;
 }
 
-/**
- * Update User job assignment.
- *
- * @param array $user User job assignment details
- * @param string $action action = add / update
- *
- * @return void
- */
-function local_user_provisioning_jobassignment(object $user, string $action) : void {
-
-    $jobassignmentdata = array('organisationid' => $user->organisationid);
-    // Position.
-    if (isset($user->position)) {
-        if (isset($user->newpositionid)) {
-            $position = local_user_provisioning_addpos($user->organisationid, $user->position, $user->id);
-            if ($position) {
-                $jobassignmentdata['positionid'] = $position->id;
-            }
-        } else if (isset($user->positionid)) {
-            $jobassignmentdata['positionid'] = $user->positionid;
-        }
-    }
-
-    // Manager.
-    if (isset($user->newmanagerjaid)) {
-        $jobassignmentdata['managerjaid'] = $user->newmanagerjaid;
-    }
-
-    // Assign user to organisation.
-    if ($action == 'add') {
-        $jobassignment = job_assignment::create_default($user->id, $jobassignmentdata);
-    } else {
-        $jobassignment = job_assignment::get_first($user->id);
-        $jobassignment->update($jobassignmentdata);
-    }
-}
 
 /**
  * Returns a not very cryptographically secure guid
@@ -853,10 +722,8 @@ function local_user_provisioning_scimresponse(string $additionalsql, array $sqlp
 function local_user_provisioning_create_user(array $json, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details($auth);
 
-    $validateuser = local_user_provisioning_validate_data($json, 'add', $orgdetails->id, new stdClass());
+    $validateuser = local_user_provisioning_validate_data($json, 'add', null, new stdClass());
 
     if (isset($validateuser->errors)) {
         $validationmessage = '';
@@ -873,7 +740,6 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
 
     // Default required fields.
     $validateuser->idnumber = local_user_provisioning_get_guid();
-    $validateuser->organisationid = $orgdetails->id;
     $validateuser->firstaccess = 0;
     $validateuser->mnethostid = 1;
     $validateuser->confirmed = 1;
@@ -887,14 +753,7 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
             setnew_password_and_mail($validateuser);
             set_user_preference('auth_forcepasswordchange', 1, $userid);
         }
-        // Add User's job assignment.
-        local_user_provisioning_jobassignment($validateuser, 'add');
 
-        if (class_exists('\local_catalystlms\user\organisation')) {
-            // Assign organisation manager to new user.
-            $usermanaging = new \local_catalystlms\user\organisation($validateuser);
-            $usermanaging->update_user_position_assignment();
-        }
         // Custom user profile field - team.
         $params['fieldid'] = 0;
         if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
@@ -903,7 +762,6 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         }
 
         $additionalsql = " WHERE u.idnumber = :idnumber";
-        $params['organisationid'] = $validateuser->organisationid;
         $params['idnumber'] = $validateuser->idnumber;
 
         // Process SCIM Response.
@@ -923,9 +781,6 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
 function local_user_provisioning_update_user(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details($auth);
-
     // Custom user profile field - team.
     $params['fieldid'] = 0;
     if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
@@ -935,15 +790,13 @@ function local_user_provisioning_update_user(array $json, string $idnumber, stri
     $sql = local_user_provisioning_get_userquerysql();
     $sql .= " WHERE u.idnumber = :idnumber";
 
-    $params['organisationid'] = $orgdetails->id;
     $params['idnumber'] = $idnumber;
 
     // Check if user exists.
     if ($user = $DB->get_record_sql($sql, $params)) {
         $oldusername = $user->username;
         // Validate JSON data.
-        $validateuser = local_user_provisioning_validate_data($json, 'update', $orgdetails->id, $user);
-        $validateuser->organisationid = $orgdetails->id;
+        $validateuser = local_user_provisioning_validate_data($json, 'update', null, $user);
 
         if (isset($validateuser->errors)) {
             $validationmessage = '';
@@ -965,12 +818,6 @@ function local_user_provisioning_update_user(array $json, string $idnumber, stri
         // Update custom profile field - Team.
         if ($fieldid) {
             local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team);
-        }
-        // Update user job assignment.
-        if ($jobassignment = local_user_provisioning_jobassignment($validateuser, 'update')) {
-            foreach ($jobassignment as $key => $value) {
-                $user->$key = $value;
-            }
         }
 
         $additionalsql = " WHERE u.idnumber = :idnumber";
@@ -1097,24 +944,6 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         $user->suspended = local_user_provisioning_isactive($thisfieldvalue);
                     break;
                     case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager':
-                        $user->manageridnumber = $thisfieldvalue;
-                        if (empty($user->manageridnumber)) {
-                            $user->newmanagerjaid = '';
-                        } else {
-                            if ($usermanager = $DB->get_record('user', array('idnumber' => $user->manageridnumber,
-                                                'deleted' => 0))) {
-                                $managerjobassignment = job_assignment::get_first($usermanager->id);
-                                if ($portalid == $managerjobassignment->organisationid) {
-                                    $user->newmanager = fullname($usermanager);
-                                    $user->newmanagerid = $usermanager->id;
-                                    $user->newmanagerjaid = $managerjobassignment->id;
-                                } else {
-                                    $validationerror[] = get_string('error:invalidmanager', 'local_user_provisioning');
-                                }
-                            } else {
-                                $validationerror[] = get_string('error:invalidmanager', 'local_user_provisioning');
-                            }
-                        }
                     break;
                 }
             }
@@ -1138,9 +967,6 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
 function local_user_provisioning_update_userfields(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details($auth);
-
     // Custom user profile field - team.
     $params['fieldid'] = 0;
     if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
@@ -1150,15 +976,13 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
     $sql = local_user_provisioning_get_userquerysql();
     $sql .= " WHERE u.idnumber = :idnumber";
 
-    $params['organisationid'] = $orgdetails->id;
     $params['idnumber'] = $idnumber;
 
     // Check if user exists.
     if ($user = $DB->get_record_sql($sql, $params)) {
         $oldusername = $user->username;
         // Validate JSON data.
-        $validateuser = local_user_provisioning_validate_datafields($json, $user, $orgdetails->id);
-        $validateuser->organisationid = $orgdetails->id;
+        $validateuser = local_user_provisioning_validate_datafields($json, $user, null);
 
         if (isset($validateuser->errors)) {
             $validationmessage = '';
@@ -1182,9 +1006,6 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
             local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team);
         }
 
-        // Update user job assignment.
-        $jobassignment = local_user_provisioning_jobassignment($validateuser, 'update');
-
         $additionalsql = " WHERE u.idnumber = :idnumber";
         // Process SCIM Response.
         local_user_provisioning_scimresponse($additionalsql, $params, $validateuser->idnumber, 200);
@@ -1205,22 +1026,9 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
 function local_user_provisioning_suspend_user(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Get Organisation details.
-    $orgdetails = local_user_provisioning_get_org_details($auth);
-
     $sql = "SELECT u.id
               FROM {user} u
-              JOIN (SELECT userid,
-                           organisationid,
-                           managerjaid,
-                           positionid
-                      FROM (SELECT DISTINCT ON (userid) *
-                              FROM {job_assignment}
-                          ORDER BY userid, sortorder ASC
-                            ) t
-                  ORDER BY sortorder ASC) AS tt ON u.id = tt.userid AND tt.organisationid = :organisationid
              WHERE idnumber = :idnumber";
-    $params['organisationid'] = $orgdetails->id;
     $params['idnumber'] = $idnumber;
 
     if ($userid = $DB->get_field_sql($sql, $params)) {
