@@ -722,7 +722,6 @@ function local_user_provisioning_scimresponse(string $additionalsql, array $sqlp
 function local_user_provisioning_create_user(array $json, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-
     $validateuser = local_user_provisioning_validate_data($json, 'add', null, new stdClass());
 
     if (isset($validateuser->errors)) {

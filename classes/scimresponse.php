@@ -22,7 +22,6 @@
  */
 
 namespace local_user_provisioning;
-defined('MOODLE_INTERNAL') || die();
 
 /**
  *

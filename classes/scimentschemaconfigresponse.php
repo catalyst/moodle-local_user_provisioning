@@ -22,7 +22,6 @@
  */
 
 namespace local_user_provisioning;
-defined('MOODLE_INTERNAL') || die();
 
 /**
  * Class to handle SCIM response for User Enterprise Schema.
