@@ -88,7 +88,7 @@ function local_user_provisioning_server() : object {
     global $CFG;
 
     // Autoloading (composer is preferred, but for this example let's just do this).
-    require_once($CFG->dirroot . '/local/oauth/OAuth2/Autoloader.php');
+    require_once($CFG->dirroot . '/local/user_provisioning/.extlib/OAuth2/Autoloader.php');
     \OAuth2\Autoloader::register();
 
     $storage = new \OAuth2\Storage\Moodle(array());
