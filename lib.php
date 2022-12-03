@@ -412,11 +412,11 @@ function local_user_provisioning_validate_auth(string $auth) : bool {
  *
  * @param array $json User data
  * @param string $action action = add / update
- * @param int $portalid Portal / Organisation ID
+ * @param null $portalid Portal / Organisation ID
  * @param object $user User object (empty if action = add)
  * @return object User details
  */
-function local_user_provisioning_validate_data(array $json, string $action, int $portalid, object $user) : object {
+function local_user_provisioning_validate_data(array $json, string $action, $portalid, object $user) : object {
     global $DB;
 
     $validationerror = array();
@@ -441,24 +441,6 @@ function local_user_provisioning_validate_data(array $json, string $action, int 
                 $lang = explode('-', $value);
                 if (is_array($lang)) {
                     $user->lang = $lang[0];
-                }
-            break;
-            case 'title':
-                $user->position = $value;
-                $sql = "SELECT p.id
-                          FROM {org_framework} orgf
-                          JOIN {org} o ON orgf.id = o.frameworkid
-                          JOIN {org_pos_assign} opa ON orgf.id = opa.orgframeworkid
-                          JOIN {pos_framework} posf ON opa.posframeworkid = posf.id
-                          JOIN {pos} p ON posf.id = p.frameworkid
-                         WHERE o.id = :portalid
-                           AND p.fullname = :fullname";
-                $params['portalid'] = $portalid;
-                $params['fullname'] = $user->position;
-                if ($record = $DB->get_record_sql($sql, $params)) {
-                    $user->positionid = $record->id;
-                } else {
-                    $user->newpositionid = 0;
                 }
             break;
             case 'department':
@@ -601,40 +583,6 @@ function local_user_provisioning_get_country(string $bywhat, string $content) : 
     }
     return '';
 }
-
-/**
- * Add position.
- *
- * @param int $organisationid Organisation ID
- * @param string $position Position
- *
- * @return mixed
- */
-function local_user_provisioning_addpos(int $organisationid, string $position, int $userid) : ? object {
-    global $CFG, $DB;
-
-    $sql = "SELECT posf.id
-              FROM {org_framework} orgf
-              JOIN {org} o ON orgf.id = o.frameworkid
-              JOIN {org_pos_assign} opa ON orgf.id = opa.orgframeworkid
-              JOIN {pos_framework} posf ON opa.posframeworkid = posf.id
-             WHERE o.id = :organisationid";
-    $param['organisationid'] = $organisationid;
-    if ($posframeworkid = $DB->get_field_sql($sql, $param)) {
-        $hierarchy = \hierarchy::load_hierarchy('position');
-        $positionitem = new stdClass();
-        $positionitem->frameworkid = $posframeworkid;
-        $positionitem->fullname = $position;
-        $positionitem->timemodified = time();
-        $positionitem->usermodified = $userid;
-        $positionitem->visible = 1;
-        $position = $hierarchy->add_hierarchy_item($positionitem, 0, $posframeworkid, false, false);
-        return $position;
-    }
-
-    return false;
-}
-
 
 /**
  * Returns a not very cryptographically secure guid
@@ -833,10 +781,10 @@ function local_user_provisioning_update_user(array $json, string $idnumber, stri
  *
  * @param array $json User data
  * @param object $user User object (empty if action = add)
- * @param int $portalid Portal / Organisation ID
+ * @param null $portalid Portal / Organisation ID
  * @return object User details
  */
-function local_user_provisioning_validate_datafields(array $json, object $user, int $portalid) : object {
+function local_user_provisioning_validate_datafields(array $json, object $user, $portalid) : object {
     global $DB;
 
     $validationerror = array();
@@ -872,28 +820,6 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         $lang = explode('-', $thisfieldvalue);
                         if (is_array($lang)) {
                             $user->lang = $lang[0];
-                        }
-                    break;
-                    case 'title':
-                        if (empty($thisfieldvalue)) {
-                            $user->positionid = null;
-                        } else {
-                            $user->position = $operations['value'];
-                            $sql = "SELECT p.id
-                                      FROM {org_framework} orgf
-                                      JOIN {org} o ON orgf.id = o.frameworkid
-                                      JOIN {org_pos_assign} opa ON orgf.id = opa.orgframeworkid
-                                      JOIN {pos_framework} posf ON opa.posframeworkid = posf.id
-                                      JOIN {pos} p ON posf.id = p.frameworkid
-                                     WHERE o.id = :portalid
-                                       AND p.fullname = :fullname";
-                            $params['portalid'] = $portalid;
-                            $params['fullname'] = $user->position;
-                            if ($record = $DB->get_record_sql($sql, $params)) {
-                                $user->positionid = $record->id;
-                            } else {
-                                $user->newpositionid = 0;
-                            }
                         }
                     break;
                     case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department':
