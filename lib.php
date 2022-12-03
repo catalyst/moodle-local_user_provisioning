@@ -890,10 +890,11 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         // Add User's job assignment.
         local_user_provisioning_jobassignment($validateuser, 'add');
 
-        // Assign organisation manager to new user.
-        $usermanaging = new \local_catalystlms\user\organisation($validateuser);
-        $usermanaging->update_user_position_assignment();
-
+        if (class_exists('\local_catalystlms\user\organisation')) {
+            // Assign organisation manager to new user.
+            $usermanaging = new \local_catalystlms\user\organisation($validateuser);
+            $usermanaging->update_user_position_assignment();
+        }
         // Custom user profile field - team.
         $params['fieldid'] = 0;
         if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {

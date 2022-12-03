@@ -1,11 +1,5 @@
 # SCIM 2.0 compliant user provisioning plugin for Moodle
 
-Plugin has dependencies in local/oauth and local/catalystlms
-
-local/oauth - Required to create a new client with client_credentials authorization used to generate token.
-
-Plugin is used to Create, Update and Suspend users for a given Organisation based on the Bearer token.
-
 This plugin makes use of 3rd party AltoRouter class for routing the SCIM endpoints (https://github.com/dannyvankooten/AltoRouter)
 
 ## How to use
