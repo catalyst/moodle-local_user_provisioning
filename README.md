@@ -30,7 +30,7 @@ e.g. If we are creating a Client secret key for Organisation `MSI Reproductive C
 
 The client will have to create two Custom extention attribues for `Team` and `Auth`
 
-### Field mapping of Kaya to Azure AD are as follows:
+### Field mapping of Moodle to Azure AD are as follows:
 
 * idnumber : id (Azure AD - unique identifier)
 * Username : userName

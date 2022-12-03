@@ -88,7 +88,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "uniqueness" => "server",
                 "description" => "Unique identifier for the User, typically used by the user to directly authenticate to the
                     service provider. This valus should be Users EMAIL ADDRESS. Each User MUST include a non-empty userName
-                    value. This identifier MUST be unique across the service provider's entire set of Users. KAYA - Username"
+                    value. This identifier MUST be unique across the service provider's entire set of Users. Moodle - Username"
 
             ),
             array(
@@ -114,7 +114,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "returned" => "default",
                         "uniqueness" => "none",
                         "description" => "The family name of the User, or last name in most Western languages
-                            (e.g., 'Jensen' given the full name 'Ms. Barbara J Jensen, III'). KAYA - Surname"
+                            (e.g., 'Jensen' given the full name 'Ms. Barbara J Jensen, III'). Moodle - Surname"
                     ),
                     array(
                         "name" => "givenName",
@@ -126,7 +126,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "returned" => "default",
                         "uniqueness" => "none",
                         "description" => "The given name of the User, or first name in most Western languages
-                            (e.g., 'Barbara' given the full name 'Ms. Barbara J Jensen, III'). KAYA - First name"
+                            (e.g., 'Barbara' given the full name 'Ms. Barbara J Jensen, III'). Moodle - First name"
                     )
                 )
             ),
@@ -140,7 +140,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "returned" => "default",
                 "uniqueness" => "none",
                 "description" => "The name of the User, suitable for display to end-users. The name SHOULD be the
-                    full name of the User being described, if known. KAYA - Alternate name"
+                    full name of the User being described, if known. Moodle - Alternate name"
             ),
             array(
                 "name" => "title",
@@ -151,7 +151,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "The user's title, such as 'Vice President.' KAYA - Job assignments - Position"
+                "description" => "The user's title, such as 'Vice President.' Moodle - Job assignments - Position"
             ),
             array(
                 "name" => "preferredLanguage",
@@ -164,7 +164,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "uniqueness" => "none",
                 "description" => "Indicates the User's preferred written or spoken language.  Generally used for selecting
                     a localized user interface; e.g., 'en_US' specifies the language English and country US.
-                    KAYA - Preferred language"
+                    Moodle - Preferred language"
             ),
             array(
                 "name" => "active",
@@ -174,7 +174,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "A Boolean value indicating the User's administrative status. KAYA - Suspended"
+                "description" => "A Boolean value indicating the User's administrative status. Moodle - Suspended"
             ),
             array(
                 "name" => "department",
@@ -185,7 +185,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "Identifies the name of a department. KAYA - Department"
+                "description" => "Identifies the name of a department. Moodle - Department"
             ),
             array(
                 "name" => "emails",
@@ -208,7 +208,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "returned" => "default",
                         "uniqueness" => "none",
                         "description" => "Email addresses for the user. The value SHOULD be canonicalized by the service
-                            provider, e.g., 'bjensen@example.com' instead of 'bjensen@EXAMPLE.COM'. KAYA - Email address"
+                            provider, e.g., 'bjensen@example.com' instead of 'bjensen@EXAMPLE.COM'. Moodle - Email address"
                     ),
                     array(
                         "name" => "type",
@@ -237,7 +237,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "description" => "A Boolean value indicating the 'primary' or preferred attribute value for this
                             attribute, e.g., the preferred mailing address or primary email address.  The primary attribute
                             value 'true' MUST appear no more than once. PLEASE NOTE - Only Primary Email address will be
-                            added to KAYA."
+                            added to Moodle."
                     )
                 )
             ),
@@ -260,7 +260,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "description" => "The city or locality component. KAYA - City/town"
+                        "description" => "The city or locality component. Moodle - City/town"
                     ),
                     array(
                         "name" => "country",
@@ -271,7 +271,7 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "description" => "The country name component. KAYA - Country"
+                        "description" => "The country name component. Moodle - Country"
                     ),
                     array(
                         "name" => "type",

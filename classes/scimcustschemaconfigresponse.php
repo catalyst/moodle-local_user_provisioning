@@ -86,7 +86,7 @@ class scimcustschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "KAYA - Custom User profile field - Team"
+                "description" => "Custom User profile field - Team"
             ),
             array(
                 "name" => "auth",
@@ -97,7 +97,7 @@ class scimcustschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "KAYA - Auth - User Login Authentication. If not supplied, will default to manual.
+                "description" => "Auth - User Login Authentication. If not supplied, will default to manual.
                     Values can be email, saml2, oidc or manual"
             )
         );

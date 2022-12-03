@@ -86,7 +86,7 @@ class scimentschemaconfigresponse extends scimresponse {
                 "returned" => "default",
                 "uniqueness" => "none",
                 "description" => "The User's manager. A complex type that optionally allows service providers to represent
-                    organizational hierarchy by referencing the 'id' attribute of another User. KAYA - Job assignments - Manager",
+                    organizational hierarchy by referencing the 'id' attribute of another User. Job assignments - Manager",
                 "subAttributes" => array(
                     array(
                         "name" => "value",
