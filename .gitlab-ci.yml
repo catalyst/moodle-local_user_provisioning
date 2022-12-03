@@ -1,7 +1,0 @@
----
-include:
-- file: /checkstyle.yml
-  project: clients/project-tools/project-scripts
-  ref: master
-stages:
-- test
