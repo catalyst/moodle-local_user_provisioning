@@ -35,7 +35,8 @@ if (!defined('SCIM2_PATCHOP_URN')) {
 }
 // SCIM API base URL.
 if (!defined('SCIM2_BASE_URL')) {
-    define('SCIM2_BASE_URL', '/local/user_provisioning/scim/rest.php');
+    $wwwroot = new \moodle_url($CFG->wwwroot);
+    define('SCIM2_BASE_URL', $wwwroot->get_path() . '/local/user_provisioning/scim/rest.php');
 }
 /*
  * PROFILE_FIELDS array
