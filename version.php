@@ -26,3 +26,4 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'local_user_provisioning';
 $plugin->version = 2021012700;
 $plugin->requires = 2015051100;
+$plugin->dependencies = array('local_oauth' => ANY_VERSION);
