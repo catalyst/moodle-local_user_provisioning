@@ -56,16 +56,16 @@ class scimentschemaconfigresponse extends scimresponse {
 
         $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
 
-        return array(
+        return [
             "id" => static::SCIM2_ENTERPRISE_USER_EXT,
             "name" => "Enterprise User",
             "description" => "Enterprise User Schema",
             "attributes" => static::get_entuserattributes(),
-            "meta" => array(
+            "meta" => [
                 "resourceType" => "Schema",
-                "location" => $locationurl . static::SCIM2_ENTERPRISE_USER_EXT
-            )
-        );
+                "location" => $locationurl . static::SCIM2_ENTERPRISE_USER_EXT,
+            ],
+        ];
     }
 
     /**
@@ -75,8 +75,8 @@ class scimentschemaconfigresponse extends scimresponse {
      */
     public static function get_entuserattributes() : array {
 
-        return array(
-            array(
+        return [
+            [
                 "name" => "manager",
                 "type" => "complex",
                 "multiValued" => false,
@@ -84,10 +84,9 @@ class scimentschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "The User's manager. A complex type that optionally allows service providers to represent
-                    organizational hierarchy by referencing the 'id' attribute of another User. Job assignments - Manager",
-                "subAttributes" => array(
-                    array(
+                "description" => get_string('attr-manager', 'local_user_provisioning'),
+                "subAttributes" => [
+                    [
                         "name" => "value",
                         "type" => "string",
                         "multiValued" => false,
@@ -96,14 +95,11 @@ class scimentschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "referenceTypes" => array(
-                            "User"
-                        ),
-                        "description" => "The URI of the SCIM resource representing the User's manager."
-                    )
-                )
-            )
-        );
+                        "referenceTypes" => ["User"],
+                        "description" => get_string('attr-manager-value', 'local_user_provisioning'),
+                    ],
+                ],
+            ],
+        ];
     }
-
 }

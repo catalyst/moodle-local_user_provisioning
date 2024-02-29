@@ -45,7 +45,7 @@ abstract class scimresponse {
     const SCIM2_LISTRESPONSE_URN = 'urn:ietf:params:scim:api:messages:2.0:ListResponse';
 
     // Array of all the three Schema's that are used.
-    const SCIM2_SCHEMAS = array(self::SCIM2_USER_URN, self::SCIM2_ENTERPRISE_USER_EXT, self::SCIM2_CUSTOM_USER_URN);
+    const SCIM2_SCHEMAS = [self::SCIM2_USER_URN, self::SCIM2_ENTERPRISE_USER_EXT, self::SCIM2_CUSTOM_USER_URN];
     // Schema version.
     const SCIM2_VERSION = 'v2';
     // Date/time the schema was created.
@@ -54,7 +54,7 @@ abstract class scimresponse {
     const TIMEMODIFIED = '2021-01-27T12:00:00Z';
 
     // An array of strings which are the schemas used in the json response - @var array[string] $schemas.
-    private $schemas = array();
+    private $schemas = [];
 
     /**
      * Set the scim response type of this object.
@@ -96,7 +96,7 @@ abstract class scimresponse {
      * @return array An array ready to be converted into a textual json object
      */
     public function to_json() : array {
-        $base = array("schemas" => $this->schemas);
+        $base = ["schemas" => $this->schemas];
         return array_merge($base, $this->extra_data());
     }
 
@@ -117,7 +117,7 @@ abstract class scimresponse {
      * @return array
      */
     protected function extra_data() : array {
-        return array();
+        return [];
     }
 
     /**

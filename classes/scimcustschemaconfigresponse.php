@@ -56,16 +56,16 @@ class scimcustschemaconfigresponse extends scimresponse {
 
         $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
 
-        return array(
+        return [
             "id" => static::SCIM2_CUSTOM_USER_URN,
             "name" => "Custom User Extention",
             "description" => "Custom User Schema Extention",
             "attributes" => static::get_customuserattributes(),
-            "meta" => array(
+            "meta" => [
                 "resourceType" => "schemaExtensions",
-                "location" => $locationurl . static::SCIM2_CUSTOM_USER_URN
-            )
-        );
+                "location" => $locationurl . static::SCIM2_CUSTOM_USER_URN,
+            ],
+        ];
     }
 
     /**
@@ -75,8 +75,8 @@ class scimcustschemaconfigresponse extends scimresponse {
      */
     public static function get_customuserattributes() : array {
 
-        return array(
-            array(
+        return [
+            [
                 "name" => "team",
                 "type" => "string",
                 "multiValued" => false,
@@ -85,9 +85,9 @@ class scimcustschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "Custom User profile field - Team"
-            ),
-            array(
+                "description" => get_string('attr-team', 'local_user_provisioning'),
+            ],
+            [
                 "name" => "auth",
                 "type" => "string",
                 "multiValued" => false,
@@ -96,10 +96,9 @@ class scimcustschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "Auth - User Login Authentication. If not supplied, will default to manual.
-                    Values can be email, saml2, oidc or manual"
-            )
-        );
+                "description" => get_string('attr-auth', 'local_user_provisioning'),
+            ],
+        ];
     }
 
 }

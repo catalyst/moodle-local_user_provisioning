@@ -45,16 +45,16 @@ class scimschemaconfigresponse extends scimresponse {
     protected function extra_data() : array {
         global $CFG;
 
-        return array(
+        return [
             "totalResults" => 3,
             "itemsPerPage" => 3,
             "startIndex" => 1,
-            "Resources" => array(
+            "Resources" => [
                 scimuserschemaconfigresponse::get_extra_data(),
                 scimentschemaconfigresponse::get_extra_data(),
-                scimcustschemaconfigresponse::get_extra_data()
-            )
-        );
+                scimcustschemaconfigresponse::get_extra_data(),
+            ],
+        ];
     }
 
 }

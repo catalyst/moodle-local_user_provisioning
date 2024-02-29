@@ -24,7 +24,7 @@
 namespace local_user_provisioning;
 
 use null_parser_processor;
-use \stdClass;
+use stdClass;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -59,7 +59,7 @@ const PROFILE_FIELDS = [
         'positionid',
         'manager',
         'managerid',
-        'manageridnumber'
+        'manageridnumber',
     ];
 
 ini_set('html_errors', false);
@@ -91,7 +91,7 @@ function local_user_provisioning_server() : object {
     require_once($CFG->dirroot . '/local/user_provisioning/.extlib/OAuth2/Autoloader.php');
     \OAuth2\Autoloader::register();
 
-    $storage = new \OAuth2\Storage\Moodle(array());
+    $storage = new \OAuth2\Storage\Moodle([]);
     // Pass a storage object or array of storage objects to the OAuth2 server class.
     $server = new \OAuth2\Server($storage);
     $server->setConfig('enforce_state', true);
@@ -283,8 +283,11 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
 
     $extrasql = '';
     $invalidfilter = false;
-    $resources = array();
-    $filter = $_GET['filter'];
+    $resources = [];
+    $filter = '';
+    if (isset($_GET['filter'])) {
+        $filter = $_GET['filter'];
+    }
 
     if ($filter != "") {
         $filter = str_getcsv($_GET['filter'], " ", '"');
@@ -342,7 +345,7 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
 
         // Custom user profile field - team.
         $params['fieldid'] = 0;
-        if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+        if ($fieldid = $DB->get_field('user_info_field', 'id', ['shortname' => USERPROFILEFIELDTEAM])) {
             $params['fieldid'] = $fieldid;
         }
 
@@ -372,7 +375,7 @@ function local_user_provisioning_get_user(array $json, string $idnumber, string 
 
     // Custom user profile field - team.
     $params['fieldid'] = 0;
-    if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+    if ($fieldid = $DB->get_field('user_info_field', 'id', ['shortname' => USERPROFILEFIELDTEAM])) {
         $params['fieldid'] = $fieldid;
     }
 
@@ -419,7 +422,7 @@ function local_user_provisioning_validate_auth(string $auth) : bool {
 function local_user_provisioning_validate_data(array $json, string $action, $portalid, object $user) : object {
     global $DB;
 
-    $validationerror = array();
+    $validationerror = [];
 
     if ($action == 'add') {
         // Define profile fields.
@@ -600,7 +603,7 @@ function local_user_provisioning_get_guid() : string {
             .substr($charid, 16, 4).$hyphen
             .substr($charid, 20, 12);
 
-    if ($DB->get_record('user', array('idnumber' => $uuid))) {
+    if ($DB->get_record('user', ['idnumber' => $uuid])) {
         local_user_provisioning_get_guid();
     }
 
@@ -623,8 +626,8 @@ function local_user_provisioning_team(int $userid, int $teamfieldid, ?string $te
         $team = '';
     }
 
-    if ($record = $DB->get_record('user_info_data', array('userid' => $userid, 'fieldid' => $teamfieldid))) {
-        $DB->set_field('user_info_data', 'data', $team, array('userid' => $userid, 'fieldid' => $teamfieldid));
+    if ($record = $DB->get_record('user_info_data', ['userid' => $userid, 'fieldid' => $teamfieldid])) {
+        $DB->set_field('user_info_data', 'data', $team, ['userid' => $userid, 'fieldid' => $teamfieldid]);
     } else {
         $thisrecord = new stdClass();
         $thisrecord->userid = $userid;
@@ -680,7 +683,7 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         local_user_provisioning_scim_error_msg($validationmessage, 'invalidSyntax', 400);
     }
 
-    if ($DB->get_record('user', array('username' => $validateuser->username))) {
+    if ($DB->get_record('user', ['username' => $validateuser->username])) {
         $createrecord = 0;
         local_user_provisioning_scim_error_msg(get_string('error:userexists', 'local_user_provisioning'), 'uniqueness', 409);
     }
@@ -703,7 +706,7 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
 
         // Custom user profile field - team.
         $params['fieldid'] = 0;
-        if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+        if ($fieldid = $DB->get_field('user_info_field', 'id', ['shortname' => USERPROFILEFIELDTEAM])) {
             $params['fieldid'] = $fieldid;
             local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team); // Update custom profile field - Team.
         }
@@ -730,7 +733,7 @@ function local_user_provisioning_update_user(array $json, string $idnumber, stri
 
     // Custom user profile field - team.
     $params['fieldid'] = 0;
-    if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+    if ($fieldid = $DB->get_field('user_info_field', 'id', ['shortname' => USERPROFILEFIELDTEAM])) {
         $params['fieldid'] = $fieldid;
     }
 
@@ -754,7 +757,7 @@ function local_user_provisioning_update_user(array $json, string $idnumber, stri
         }
 
         if (!empty($validateuser->username) && $oldusername !== $validateuser->username) {
-            if ($DB->get_record('user', array('username' => $validateuser->username))) {
+            if ($DB->get_record('user', ['username' => $validateuser->username])) {
                 local_user_provisioning_scim_error_msg(get_string('error:userexists', 'local_user_provisioning'),
                     'uniqueness', 409);
             }
@@ -787,7 +790,7 @@ function local_user_provisioning_update_user(array $json, string $idnumber, stri
 function local_user_provisioning_validate_datafields(array $json, object $user, $portalid) : object {
     global $DB;
 
-    $validationerror = array();
+    $validationerror = [];
 
     // Check if schema is PatchOp.
     if (array_key_exists('Operations', $json)) {
@@ -894,7 +897,7 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
 
     // Custom user profile field - team.
     $params['fieldid'] = 0;
-    if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+    if ($fieldid = $DB->get_field('user_info_field', 'id', ['shortname' => USERPROFILEFIELDTEAM])) {
         $params['fieldid'] = $fieldid;
     }
 
@@ -918,7 +921,7 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
         }
 
         if (!empty($validateuser->username) && $oldusername !== $validateuser->username) {
-            if ($DB->get_record('user', array('username' => $validateuser->username))) {
+            if ($DB->get_record('user', ['username' => $validateuser->username])) {
                 local_user_provisioning_scim_error_msg(get_string('error:userexists', 'local_user_provisioning'),
                     'uniqueness', 409);
             }
@@ -957,7 +960,7 @@ function local_user_provisioning_suspend_user(array $json, string $idnumber, str
     $params['idnumber'] = $idnumber;
 
     if ($userid = $DB->get_field_sql($sql, $params)) {
-        $DB->set_field('user', 'suspended', 1, array('id' => $userid));
+        $DB->set_field('user', 'suspended', 1, ['id' => $userid]);
         local_user_provisioning_scim_error_msg(get_string('nocontent_help', 'local_user_provisioning', $idnumber),
                     get_string('nocontent', 'local_user_provisioning'), 204);
     }

@@ -56,16 +56,13 @@ class scimuserschemaconfigresponse extends scimresponse {
 
         $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
 
-        return array(
-            "id" => static::SCIM2_USER_URN,
-            "name" => 'User',
-            "description" => 'User Schema',
-            "attributes" => static::get_userattributes(),
-            "meta" => array (
-                "resourceType" => "Schema",
-                "location" => $locationurl . static::SCIM2_USER_URN
-            )
-        );
+        return [
+                "id" => static::SCIM2_USER_URN,
+                "name" => 'User',
+                "description" => 'User Schema',
+                "attributes" => static::get_userattributes(),
+                "meta" => ["resourceType" => "Schema", "location" => $locationurl . static::SCIM2_USER_URN],
+        ];
     }
 
     /**
@@ -75,8 +72,8 @@ class scimuserschemaconfigresponse extends scimresponse {
      */
     public static function get_userattributes() : array {
 
-        return array(
-            array(
+        return [
+            [
                 "name" => "userName",
                 "type" => "string",
                 "multiValued" => false,
@@ -85,12 +82,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "server",
-                "description" => "Unique identifier for the User, typically used by the user to directly authenticate to the
-                    service provider. This valus should be Users EMAIL ADDRESS. Each User MUST include a non-empty userName
-                    value. This identifier MUST be unique across the service provider's entire set of Users. Moodle - Username"
-
-            ),
-            array(
+                "description" => get_string('attr-username', 'local_user_provisioning'),
+            ],
+            [
                 "name" => "name",
                 "type" => "complex",
                 "multiValued" => false,
@@ -98,12 +92,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "The components of the user's real name. Providers MAY return just the full name as a single
-                    string in the formatted sub-attribute, or they MAY return just the individual component attributes using
-                    the other sub-attributes, or they MAY return both.  If both variants are returned, they SHOULD be
-                    describing the same name, with the formatted name indicating how the component attributes should be combined.",
-                "subAttributes" => array (
-                    array(
+                "description" => get_string('attr-name', 'local_user_provisioning'),
+                "subAttributes" => [
+                    [
                         "name" => "familyName",
                         "type" => "string",
                         "multiValued" => false,
@@ -112,10 +103,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "description" => "The family name of the User, or last name in most Western languages
-                            (e.g., 'Jensen' given the full name 'Ms. Barbara J Jensen, III'). Moodle - Surname"
-                    ),
-                    array(
+                        "description" => get_string('attr-name-familyname', 'local_user_provisioning'),
+                    ],
+                    [
                         "name" => "givenName",
                         "type" => "string",
                         "multiValued" => false,
@@ -124,12 +114,11 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "description" => "The given name of the User, or first name in most Western languages
-                            (e.g., 'Barbara' given the full name 'Ms. Barbara J Jensen, III'). Moodle - First name"
-                    )
-                )
-            ),
-            array(
+                        "description" => get_string('attr-name-givenname', 'local_user_provisioning'),
+                    ],
+                ],
+            ],
+            [
                 "name" => "displayName",
                 "type" => "string",
                 "multiValued" => false,
@@ -138,10 +127,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "The name of the User, suitable for display to end-users. The name SHOULD be the
-                    full name of the User being described, if known. Moodle - Alternate name"
-            ),
-            array(
+                "description" => get_string('attr-displayname', 'local_user_provisioning'),
+            ],
+            [
                 "name" => "title",
                 "type" => "string",
                 "multiValued" => false,
@@ -150,9 +138,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "The user's title, such as 'Vice President.' Moodle - Job assignments - Position"
-            ),
-            array(
+                "description" => get_string('attr-displayname', 'local_user_provisioning'),
+            ],
+            [
                 "name" => "preferredLanguage",
                 "type" => "string",
                 "multiValued" => false,
@@ -161,11 +149,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "Indicates the User's preferred written or spoken language.  Generally used for selecting
-                    a localized user interface; e.g., 'en_US' specifies the language English and country US.
-                    Moodle - Preferred language"
-            ),
-            array(
+                "description" => get_string('attr-preferredlanguage', 'local_user_provisioning'),
+            ],
+            [
                 "name" => "active",
                 "type" => "boolean",
                 "multiValued" => false,
@@ -173,9 +159,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "A Boolean value indicating the User's administrative status. Moodle - Suspended"
-            ),
-            array(
+                "description" => get_string('attr-active', 'local_user_provisioning'),
+            ],
+            [
                 "name" => "department",
                 "type" => "string",
                 "multiValued" => false,
@@ -184,9 +170,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "Identifies the name of a department. Moodle - Department"
-            ),
-            array(
+                "description" => get_string('attr-active', 'local_user_provisioning'),
+            ],
+            [
                 "name" => "emails",
                 "type" => "complex",
                 "multiValued" => false,
@@ -194,10 +180,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "Email addresses for the user. The value SHOULD be canonicalized by the service provider,
-                    e.g., 'bjensen@example.com' instead of 'bjensen@EXAMPLE.COM'.",
-                "subAttributes" => array (
-                    array(
+                "description" => get_string('attr-emails', 'local_user_provisioning'),
+                "subAttributes" => [
+                    [
                         "name" => "value",
                         "type" => "string",
                         "multiValued" => false,
@@ -206,10 +191,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "description" => "Email addresses for the user. The value SHOULD be canonicalized by the service
-                            provider, e.g., 'bjensen@example.com' instead of 'bjensen@EXAMPLE.COM'. Moodle - Email address"
-                    ),
-                    array(
+                        "description" => get_string('attr-emails-value', 'local_user_provisioning'),
+                    ],
+                    [
                         "name" => "type",
                         "type" => "string",
                         "multiValued" => false,
@@ -218,14 +202,10 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "canonicalValues" => array (
-                            "work",
-                            "home",
-                            "other"
-                        ),
-                        "description" => "A label indicating the attribute's function, e.g., 'work' or 'home'."
-                    ),
-                    array(
+                        "canonicalValues" => ["work", "home", "other"],
+                        "description" => get_string('attr-emails-type', 'local_user_provisioning'),
+                    ],
+                    [
                         "name" => "primary",
                         "type" => "boolean",
                         "multiValued" => false,
@@ -233,14 +213,11 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "description" => "A Boolean value indicating the 'primary' or preferred attribute value for this
-                            attribute, e.g., the preferred mailing address or primary email address.  The primary attribute
-                            value 'true' MUST appear no more than once. PLEASE NOTE - Only Primary Email address will be
-                            added to Moodle."
-                    )
-                )
-            ),
-            array(
+                        "description" => get_string('attr-emails-primary', 'local_user_provisioning'),
+                    ],
+                ],
+            ],
+            [
                 "name" => "addresses",
                 "type" => "complex",
                 "multiValued" => false,
@@ -248,9 +225,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "A physical mailing address for this User.",
-                "subAttributes" => array(
-                    array(
+                "description" => get_string('attr-addresses', 'local_user_provisioning'),
+                "subAttributes" => [
+                    [
                         "name" => "locality",
                         "type" => "string",
                         "multiValued" => false,
@@ -259,9 +236,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "description" => "The city or locality component. Moodle - City/town"
-                    ),
-                    array(
+                        "description" => get_string('attr-addresses-locality', 'local_user_provisioning'),
+                    ],
+                    [
                         "name" => "country",
                         "type" => "string",
                         "multiValued" => false,
@@ -270,9 +247,9 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "description" => "The country name component. Moodle - Country"
-                    ),
-                    array(
+                        "description" => get_string('attr-addresses-country', 'local_user_provisioning'),
+                    ],
+                    [
                         "name" => "type",
                         "type" => "string",
                         "multiValued" => false,
@@ -281,16 +258,11 @@ class scimuserschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "canonicalValues" => array(
-                            "work",
-                            "home",
-                            "other"
-                        ),
-                        "description" => "A label indicating the attribute's function, e.g., 'work' or 'home'."
-                    )
-                )
-            )
-        );
+                        "canonicalValues" => ["work", "home", "other"],
+                        "description" => get_string('attr-addresses-type', 'local_user_provisioning'),
+                    ],
+                ],
+            ],
+        ];
     }
-
 }

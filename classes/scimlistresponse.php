@@ -45,10 +45,10 @@ class scimlistresponse extends scimresponse {
     }
 
     protected function extra_data() : array {
-        $json = array();
+        $json = [];
         foreach ($this->resources as $r) {
             $json[] = $r->extra_data();
         }
-        return array("Resources" => $json, "totalResults" => count($this->resources));
+        return ["Resources" => $json, "totalResults" => count($this->resources)];
     }
 }

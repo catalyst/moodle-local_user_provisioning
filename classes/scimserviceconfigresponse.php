@@ -49,36 +49,22 @@ class scimserviceconfigresponse extends scimresponse {
 
         $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/ServiceProviderConfigs';
 
-        return array(
-            'patch' => array(
-                'supported' => true
-            ),
-            'bulk' => array(
-                'supported' => false
-            ),
-            'filter' => array(
-                'supported' => true
-            ),
-            'changePassword' => array(
-                'supported' => false
-            ),
-            'sort' => array(
-                'supported' => false
-            ),
-            'etag' => array(
-                'supported' => false
-            ),
-            'authenticationSchemes' => array(
-                $this->get_meta($this->auth)
-            ),
-            'meta' => array(
+        return [
+            'patch' => ['supported' => true],
+            'bulk' => ['supported' => false],
+            'filter' => ['supported' => true],
+            'changePassword' => ['supported' => false],
+            'sort' => ['supported' => false],
+            'etag' => ['supported' => false],
+            'authenticationSchemes' => [$this->get_meta($this->auth)],
+            'meta' => [
                 'location' => $locationurl,
                 'resourceType' => 'ServiceProviderConfig',
                 'created' => static::TIMECREATED,
                 'lastModified' => static::TIMEMODIFIED,
-                'version' => static::SCIM2_VERSION
-            )
-        );
+                'version' => static::SCIM2_VERSION,
+            ],
+        ];
     }
 
     /**
@@ -90,23 +76,23 @@ class scimserviceconfigresponse extends scimresponse {
     protected function get_meta(string $auth) : array {
         switch ($auth) {
             case 'httpbasic':
-                return array(
+                return [
                     'name' => get_string('httpbasic', 'local_user_provisioning'),
                     'description' => get_string('httpbasic_desc', 'local_user_provisioning'),
                     'specUri' => 'http://www.rfc-editor.org/info/rfc2617',
                     'documentationUri' => 'https://en.wikipedia.org/wiki/Basic_access_authentication',
-                    'type' => 'httpbasic'
-                );
+                    'type' => 'httpbasic',
+                ];
             break;
             default:
-                return array(
+                return [
                     'name' => get_string('oauth2bearer', 'local_user_provisioning'),
                     'description' => get_string('oauth2bearer_desc', 'local_user_provisioning'),
                     'specUri' => 'https://www.rfc-editor.org/info/rfc6750',
                     'documentationUri' => 'https://en.wikipedia.org/wiki/OAuth#OAuth_2.0_2',
                     'type' => 'oauthbearertoken',
-                    "primary" => true
-                );
+                    "primary" => true,
+                ];
             break;
         }
     }

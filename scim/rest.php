@@ -69,6 +69,7 @@ $router->map('PATCH', '/v2/Users/[**:id]', 'local_user_provisioning_update_userf
 $match = $router->match();
 
 $target = __NAMESPACE__ . '\\' . $match['target'];
+$data = [];
 
 // Check if there's route matched and the method can be called.
 if ($match && is_callable($target)) {
@@ -102,8 +103,6 @@ if ($match && is_callable($target)) {
                 local_user_provisioning_scim_error_msg(json_last_error_msg(),
                     get_string('error:badrequest', 'local_user_provisioning'), 400);
             }
-        } else {
-            $data = [];
         }
         // Validate the Bearer token.
         local_user_provisioning_validatetoken();

@@ -51,10 +51,6 @@ class scimerrorresponse extends scimresponse {
      * @return array
      */
     protected function extra_data() : array {
-        return array(
-            'status' => $this->status,
-            'scimType' => $this->type,
-            'detail' => $this->message
-        );
+        return ['status' => $this->status, 'scimType' => $this->type, 'detail' => $this->message];
     }
 }

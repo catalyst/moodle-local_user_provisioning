@@ -69,55 +69,43 @@ class scimuserresponse extends scimresponse {
         $manageridnumber = '';
         $manager = '';
         $refurl = '';
-        if ($this->user->managerid) {
+        if (isset($this->user->managerid) && $this->user->managerid) {
             $manageridnumber = $this->user->manageridnumber;
             $manager = $this->user->managerfirstname . ' ' . $this->user->managerlastname;
-            $refurl = (new moodle_url('/user/profile.php', array('id' => $this->user->managerid)))->out();
+            $refurl = (new moodle_url('/user/profile.php', ['id' => $this->user->managerid]))->out();
         }
-        $returnvar = array(
+        $returnvar = [
             'id' => $this->user->idnumber,
             'externalId' => $this->user->idnumber,
             'userName' => $this->user->username,
             'displayName' => $this->user->alternatename,
-            'name' => array (
-                'givenName' => $this->user->firstname,
-                'familyName' => $this->user->lastname
-            ),
-            'emails' => array(
-                            array(
-                                'value' => $this->user->email,
-                                'type' => 'work',
-                                'primary' => true
-                            )
-                        ),
+            'name' => ['givenName' => $this->user->firstname, 'familyName' => $this->user->lastname],
+            'emails' => [['value' => $this->user->email, 'type' => 'work', 'primary' => true]],
             'preferredLanguage' => $this->user->lang,
-            'addresses' => array(
-                                array(
-                                    'locality' => $this->user->city,
-                                    'country' => $this->user->country,
-                                    'type' => 'work',
-                                    'primary' => true
-                                )
-                            ),
-            'title' => $this->user->title,
+            'addresses' => [
+                [
+                    'locality' => $this->user->city,
+                    'country' => $this->user->country,
+                    'type' => 'work',
+                    'primary' => true,
+                ],
+            ],
+            'title' => (isset($this->user->title) ? $this->user->title : ''),
             'department' => $this->user->department,
             'active' => $this->active,
-            static::SCIM2_ENTERPRISE_USER_EXT => array(
-                                                    'manager' => array(
-                                                                    'value' => $manageridnumber,
-                                                                    '$ref' => $refurl,
-                                                                    'displayName' => $manager
-                                                                )
-                                                ),
-            static::SCIM2_CUSTOM_USER_URN => array(
-                                                'auth' => $this->user->auth,
-                                                'team' => $this->user->team
-                                            ),
-            'meta' => $this->get_meta()
-        );
+            static::SCIM2_ENTERPRISE_USER_EXT => [
+                'manager' => [
+                    'value' => $manageridnumber,
+                    '$ref' => $refurl,
+                    'displayName' => $manager,
+                ],
+            ],
+            static::SCIM2_CUSTOM_USER_URN => ['auth' => $this->user->auth, 'team' => $this->user->team],
+            'meta' => $this->get_meta(),
+        ];
 
         if ($this->appendschemainfo) {
-            $returnvar = array('schemas' => static::SCIM2_SCHEMAS) + $returnvar;
+            $returnvar = ['schemas' => static::SCIM2_SCHEMAS] + $returnvar;
         }
 
         return $returnvar;
@@ -130,12 +118,12 @@ class scimuserresponse extends scimresponse {
      */
     protected function get_meta() : array {
         global $CFG;
-        return array(
+        return [
             'resourceType' => 'User',
             'created' => gmdate("Y-m-d\TH:i:s\Z", $this->user->timecreated),
             'lastModified' => gmdate("Y-m-d\TH:i:s\Z", $this->user->timemodified),
             'location' => $CFG->wwwroot . '/user/view.php?id=' . $this->user->id,
-            'version' => static::SCIM2_VERSION
-        );
+            'version' => static::SCIM2_VERSION,
+        ];
     }
 }
