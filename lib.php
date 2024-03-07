@@ -266,7 +266,7 @@ function local_user_provisioning_get_userquerysql() : string {
 
     return "SELECT distinct u.id, u.idnumber, u.username, u.alternatename, u.firstname, u.lastname, u.email,
                         u.lang, u.auth, u.department, u.city, u.country, u.suspended, u.timecreated, u.timemodified,
-                        uid.data AS team, p.fullname AS title
+                        uid.data AS team
               FROM {user} u
               LEFT JOIN {user_info_data} uid ON u.id = uid.userid AND fieldid = :fieldid";
 }
@@ -281,7 +281,7 @@ function local_user_provisioning_get_userquerysql() : string {
 function local_user_provisioning_get_users(array $json, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    $extrasql = '';
+    $extrasql = ' ';
     $invalidfilter = false;
     $resources = [];
     $filter = '';
@@ -294,16 +294,16 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
 
         switch ($filter[0]) {
             case 'userName':
-                $extrasql = 'WHERE u.username ';
+                $extrasql .= 'WHERE u.username ';
             break;
             case 'name.familyName':
-                $extrasql = 'WHERE u.lastname ';
+                $extrasql .= 'WHERE u.lastname ';
             break;
             case 'name.givenName':
-                $extrasql = 'WHERE u.firstname ';
+                $extrasql .= 'WHERE u.firstname ';
             break;
             case 'emails':
-                $extrasql = 'WHERE u.email ';
+                $extrasql .= 'WHERE u.email ';
             break;
             default:
                 $invalidfilter = true;
@@ -525,7 +525,7 @@ function local_user_provisioning_validate_data(array $json, string $action, $por
         $validationerror[] = get_string('error:missingemail', 'local_user_provisioning');
     }
 
-    // Portal organisations using User Provisioning API will be using 'saml2' authentication.
+    // Default authentication.
     $user->auth = 'saml2';
 
     if (count($validationerror)) {
@@ -664,7 +664,7 @@ function local_user_provisioning_scimresponse(string $additionalsql, array $sqlp
 }
 
 /**
- * Updates user and assigns to organisation.
+ * Update user.
  *
  * @param array $json User details
  * @param string $auth Authentication.
@@ -869,7 +869,7 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         }
                     break;
                     case 'active':
-                        $user->suspended = local_user_provisioning_isactive($thisfieldvalue);
+                        $user->suspended = local_user_provisioning_isactive((bool) $thisfieldvalue);
                     break;
                     case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager':
                     break;

@@ -24,17 +24,17 @@
 defined('MOODLE_INTERNAL') || die;
 
 if ($hassiteconfig) {
-    $ADMIN->add('localplugins', new admin_category('local_user_provisioning_settings',
+    $ADMIN->add('localplugins', new admin_category('user_provisioning',
                                 new lang_string('pluginname', 'local_user_provisioning')));
 
-    $settingspage = new admin_settingpage('local_user_provisioning', new lang_string('pluginname', 'local_user_provisioning'));
+    $settingspage = new admin_settingpage('local_user_provisioning', new lang_string('debugsettings', 'local_user_provisioning'));
 
     if ($ADMIN->fulltree) {
 
         $settingspage->add(new admin_setting_configcheckbox(
-            'local_user_provisioning/enabled_debug',
-            new lang_string('enabled_debug', 'local_user_provisioning'),
-            new lang_string('enabled_desc', 'local_user_provisioning'),
+            'local_user_provisioning/enable_debug',
+            new lang_string('enable_debug', 'local_user_provisioning'),
+            new lang_string('enable_desc', 'local_user_provisioning'),
             0
         ));
 
@@ -42,10 +42,15 @@ if ($hassiteconfig) {
             'local_user_provisioning/debug_email',
             new lang_string('debug_email_address', 'local_user_provisioning'),
             new lang_string('debug_email_desc', 'local_user_provisioning'),
-            new lang_string('debug_email_address_default', 'local_user_provisioning'),
+            '',
             'email'
         ));
     }
+    $ADMIN->add('user_provisioning', $settingspage);
 
-    $ADMIN->add('localplugins', $settingspage);
+    $clients = new admin_externalpage('user_provisioning_clients',
+        get_string('clients', 'local_user_provisioning', null, true),
+        new moodle_url('/local/user_provisioning/index.php'));
+    $ADMIN->add('user_provisioning', $clients);
+
 }

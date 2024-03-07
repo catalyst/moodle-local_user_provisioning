@@ -21,11 +21,21 @@
  * @author     Jackson D'Souza <jackson.dsouza@catalyst-eu.net>
  */
 
-$string['pluginname'] = 'SCIM User Provisioning - Bearer token';
-$string['enabled_debug'] = 'Debugging Enabled';
-$string['enabled_desc'] = 'Enable Debugging for User Provisioning';
+$string['pluginname'] = 'SCIM User Provisioning';
+$string['addclient'] = 'Add client';
+$string['clients'] = 'Clients';
+$string['client_id'] = 'Client identifier';
+$string['client_secret'] = 'Client secret Key';
+$string['redirect_uri'] = 'Redirect URL';
+$string['grant_types'] = 'Grant Types';
+$string['scope'] = 'Scope';
+$string['user_id'] = 'User ID';
+$string['client_id_help'] = 'Identifier to be used from the client form in order to reference this provider. It has to be unique. For instance, a valid identifier could be "blog1" or "nodes".';
+
+$string['enable_debug'] = 'Enable debugging';
+$string['enable_desc'] = 'Enable Debugging for User Provisioning';
 $string['debug_email_address'] = 'Debug email address';
-$string['debug_email_address_default'] = 'jonathan';
+$string['debug_email_address_default'] = '';
 $string['debug_email_desc'] = 'Recipient email address for debug information (mandatory if debugging enabled)';
 $string['email_subject'] = 'Local_User_Provisioning API debugging Email';
 $string['email_body_text1'] = 'PATH INFO = ';
@@ -37,6 +47,17 @@ $string['oauth2bearer'] = 'OAuth Bearer Token';
 $string['oauth2bearer_desc'] = 'Authentication scheme using the OAuth Bearer Token Standard 2.0';
 $string['httpbasic'] = 'HTTP Basic';
 $string['httpbasic_desc'] = 'Authentication scheme using the HTTP Basic Standard';
+
+$string['debugsettings'] = 'Debug settings';
+$string['client_not_exists'] = 'Client does not exist';
+$string['saveok'] = 'Client successfully saved';
+$string['confirmdeletestr'] = 'Are you sure you want to delete client {$a}?';
+$string['delok'] = 'Client successfully deleted';
+$string['client_id_existing_error'] = 'The Client identifier specified already exists, please choose another one';
+$string['insert_error'] = 'Error occurred creating client';
+$string['update_error'] = 'Error occurred updating client data';
+$string['delete'] = 'Delete';
+$string['delete_error'] = 'Error occurred deleting client';
 
 // SCIM attribute descriptions...
 $string['attr-active'] = "A Boolean value indicating the User's administrative status. Moodle - Suspended";

@@ -14,17 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * Capability definitions for local user_provisioning plugin.
+ *
  * @package    local_user_provisioning
- * @copyright  Catalyst IT Europe Ltd 2021
+ * @copyright  Catalyst IT Europe Ltd 2024
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author     Jackson D'Souza <jackson.dsouza@catalyst-eu.net>
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_user_provisioning';
-$plugin->version = 2021012701;
-$plugin->requires = 2020061518; // Moodle 3.9.
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->supported = [39, 401]; // A range of branch numbers of supported moodle versions.
+$capabilities = [
+    'local/user_provisioning:manageclients' => [
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+    ],
+];
