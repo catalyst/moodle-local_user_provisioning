@@ -668,7 +668,7 @@ function local_user_provisioning_scimresponse(string $additionalsql, array $sqlp
  * @return void
  */
 function local_user_provisioning_create_user(array $json, string $auth = 'oauthbearertoken') : void {
-    global $DB;
+    global $DB, $CFG;
 
     $validateuser = local_user_provisioning_validate_data($json, 'add', null, new stdClass());
 
@@ -688,7 +688,7 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
     // Default required fields.
     $validateuser->idnumber = local_user_provisioning_get_guid();
     $validateuser->firstaccess = 0;
-    $validateuser->mnethostid = 1;
+    $validateuser->mnethostid = $CFG->mnet_localhost_id;
     $validateuser->confirmed = 1;
     $validateuser->timecreated = time();
     $validateuser->secret = random_string(15);
