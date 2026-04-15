@@ -59,3 +59,5 @@ $string['error:missinglastname'] = 'name.familyName is missing in the request bo
 $string['error:missingemail'] = 'emails.value is missing in the request body';
 $string['error:invalidauth'] = 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User auth not supported';
 $string['error:invalidmanager'] = 'Manager set for this user is invalid';
+// Privacy.
+$string['privacy:metadata'] = 'The User Provisioning plugin does not store any personal data.';
