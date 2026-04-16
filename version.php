@@ -26,5 +26,8 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'local_user_provisioning';
 $plugin->version = 2026041500;
 $plugin->requires = 2024100700; // Moodle 4.5
-$plugin->maturity  = MATURITY_ALPHA;
-$plugin->supported = [39, 401];     // A range of branch numbers of supported moodle versions.
+$plugin->maturity  = MATURITY_STABLE;
+$plugin->supported = [405, 502];     // A range of branch numbers of supported moodle versions.
+$plugin->dependencies = [
+    'local_oauth' => 2023091301
+];

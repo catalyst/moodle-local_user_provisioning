@@ -43,7 +43,7 @@ if ($hassiteconfig) {
             new lang_string('debug_email_address', 'local_user_provisioning'),
             new lang_string('debug_email_desc', 'local_user_provisioning'),
             new lang_string('debug_email_address_default', 'local_user_provisioning'),
-            'email'
+            core\param::EMAIL->value
         ));
     }
 
