@@ -76,7 +76,8 @@ class workplace_helper {
             throw new \coding_exception('Tenant resolution failed after SCIM error response.');
         }
 
-        return $tenant;
+        $this->tenant = $tenant;
+        return $this->tenant;
     }
 
     /**
@@ -94,9 +95,8 @@ class workplace_helper {
      * Add/update/delete manager for a user.
      * MWP supports more than 1 manager, but we are going to limit this over the API to 1 manager per user.
      *
-     * If the managerid argument is null then remove all managers.
-     * If the managerid argument is not null and the user has any managers then update the most recent one and remove all others.
-     * If the managerid argument is not null and the user does not have any managers then add one.
+    * If the managerid argument is null then remove all managers.
+    * If the managerid argument is not null then remove all existing managers and add exactly one.
      *
      * @param int $userid
      * @param int|null $managerid
@@ -109,7 +109,7 @@ class workplace_helper {
             + organisation::PERM_VIEW_REPORTS
             + organisation::PERM_RECEIVE_NOTIFICATIONS;
 
-        // Grab all records ordered by oldest last.
+        // Get all assigned managers for this user in this tenant.
         $usermanagerrecords = \tool_organisation\local\persistent\user_manager::get_records(
             filters: [
                 'userid' => $userid,
@@ -118,29 +118,16 @@ class workplace_helper {
             order: 'id DESC'
         );
 
+        // Always clear existing assignments first so we end up with zero or one manager only.
+        foreach ($usermanagerrecords as $usermanagerrecord) {
+            user_manager::delete_assigned_manager($userid, $usermanagerrecord->get('managerid'));
+        }
+
         if (!$managerid) {
-            foreach ($usermanagerrecords as $usermanagerrecord) {
-                user_manager::delete_assigned_manager($userid, $usermanagerrecord->get('managerid'));
-            }
             return;
         }
 
-        // We aren't deleting users so update the most recently assigned manager to the new one and remove any others.
-        $oldestmanager = array_pop($usermanagerrecords);
-        if (!empty($oldestmanager)) {
-            user_manager::update_assigned_manager(
-                $userid,
-                (object) ['id' => $managerid, 'permissions' => $permissions],
-                $oldestmanager->get('managerid')
-            );
-            array_walk(
-                $usermanagerrecords,
-                static fn($record) => user_manager::delete_assigned_manager($userid, $record->get('managerid'))
-            );
-            return;
-        }
-
-        // We've got this far so we must be adding a manager.
+        // Add exactly one manager assignment.
         $manager = new stdClass();
         $manager->id = $managerid;
         $manager->tenantid = $this->tenant->get('id');

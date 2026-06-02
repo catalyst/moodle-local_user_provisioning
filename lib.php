@@ -328,6 +328,83 @@ function local_user_provisioning_parse_active_value($value): ?int {
 }
 
 /**
+ * Return allowed SCIM schema URNs for create/update user payloads.
+ *
+ * @return array
+ * @package local_user_provisioning
+ */
+function local_user_provisioning_get_allowed_user_schema_urns(): array {
+    $allowed = [
+        scimresponse::SCIM2_USER_URN,
+        scimresponse::SCIM2_CUSTOM_USER_URN,
+    ];
+
+    if (local_user_provisioning_is_moodleworkplace()) {
+        $allowed[] = scimresponse::SCIM2_ENTERPRISE_USER_EXT;
+    }
+
+    return $allowed;
+}
+
+/**
+ * Validate schema URNs from a request payload.
+ *
+ * @param mixed $schemas
+ * @param array $allowedurns
+ * @param array $validationerror
+ * @return void
+ * @package local_user_provisioning
+ */
+function local_user_provisioning_validate_schema_urns($schemas, array $allowedurns, array &$validationerror): void {
+    if (!is_array($schemas)) {
+        $validationerror[] = get_string('error:badrequest_help', 'local_user_provisioning')
+            . ' Invalid schemas payload type.';
+        return;
+    }
+
+    foreach ($schemas as $schemaurn) {
+        if (!is_string($schemaurn) || !in_array($schemaurn, $allowedurns, true)) {
+            $validationerror[] = get_string('error:badrequest_help', 'local_user_provisioning')
+                . ' Invalid schema URI: ' . (string)$schemaurn;
+        }
+    }
+}
+
+/**
+ * True when the top-level SCIM field is a known envelope/read-only field.
+ *
+ * @param string $field
+ * @return bool
+ * @package local_user_provisioning
+ */
+function local_user_provisioning_is_ignored_readonly_user_field(string $field): bool {
+    return in_array($field, ['id', 'externalId', 'meta', 'groups'], true);
+}
+
+/**
+ * True when the SCIM PATCH path is a known envelope/read-only path.
+ *
+ * @param string $path
+ * @return bool
+ * @package local_user_provisioning
+ */
+function local_user_provisioning_is_ignored_readonly_patch_path(string $path): bool {
+    if (in_array($path, ['id', 'externalId', 'meta', 'groups', 'schemas'], true)) {
+        return true;
+    }
+
+    if (strpos($path, 'meta.') === 0) {
+        return true;
+    }
+
+    if (preg_match('/^groups(\[.*\])?(\..+)?$/', $path)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * Common SQL for fetching user record(s). Will be used to get a given user's record or in a user filter query.
  *
  * @param bool $includeteam Whether to include the team custom profile field.
@@ -517,6 +594,11 @@ function local_user_provisioning_validate_auth(string $auth): bool {
 
     $supportedauths = array_values(array_filter(array_map('trim', explode(',', $CFG->auth))));
     $auth = trim(\core_text::strtolower($auth));
+
+    // Manual auth is considered valid for provisioning even when not present in cfg auth list.
+    if ($auth === 'manual') {
+        return true;
+    }
 
     return in_array($auth, $supportedauths, true);
 }
@@ -709,8 +791,27 @@ function local_user_provisioning_validate_data(
                     }
                 }
                 break;
+            case 'schemas':
+                // SCIM envelope field; validate schema URNs but do not map to Moodle profile data.
+                local_user_provisioning_validate_schema_urns(
+                    $value,
+                    local_user_provisioning_get_allowed_user_schema_urns(),
+                    $validationerror
+                );
+                break;
+            case 'id':
+            case 'externalId':
+            case 'meta':
+            case 'groups':
+                // Ignore read-only SCIM fields for interoperability.
+                break;
             default:
-                local_user_provisioning_custom_map_inbound_field($key, $value, $user);
+                if (!local_user_provisioning_custom_map_inbound_field($key, $value, $user)) {
+                    if (!local_user_provisioning_is_ignored_readonly_user_field($key)) {
+                        $validationerror[] = get_string('error:badrequest_help', 'local_user_provisioning')
+                            . ' Unsupported field in payload: ' . $key;
+                    }
+                }
                 break;
         }
     }
@@ -898,7 +999,7 @@ function local_user_provisioning_scimresponse(string $idnumber, int $responsecod
  * @package local_user_provisioning
  */
 function local_user_provisioning_create_user(array $json, string $auth = 'oauthbearertoken'): void {
-    global $CFG, $DB;
+    global $CFG, $DB, $PAGE;
 
     $validateuser = local_user_provisioning_validate_data($json, 'add', new stdClass(), $auth);
 
@@ -947,6 +1048,9 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         }
 
         if ($validateuser->auth === 'manual' || $validateuser->auth === 'email') {
+            if (empty($PAGE->context)) {
+                $PAGE->set_context(\context_system::instance());
+            }
             setnew_password_and_mail($validateuser);
             set_user_preference('auth_forcepasswordchange', 1, $userid);
         }
@@ -998,6 +1102,14 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
     global $DB;
 
     $validationerror = [];
+
+    if (array_key_exists('schemas', $json)) {
+        local_user_provisioning_validate_schema_urns(
+            $json['schemas'],
+            [SCIM2_PATCHOP_URN],
+            $validationerror
+        );
+    }
 
     // Check if schema is PatchOp.
     if (array_key_exists('Operations', $json)) {
@@ -1129,7 +1241,12 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         }
                         break;
                     default:
-                        local_user_provisioning_custom_map_patch_field($thisfield, $thisfieldvalue, $user);
+                        if (!local_user_provisioning_custom_map_patch_field($thisfield, $thisfieldvalue, $user)) {
+                            if (!local_user_provisioning_is_ignored_readonly_patch_path($thisfield)) {
+                                $validationerror[] = get_string('error:badrequest_help', 'local_user_provisioning')
+                                    . ' Unsupported PATCH path: ' . $thisfield;
+                            }
+                        }
                         break;
                 }
             }

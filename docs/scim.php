@@ -25,31 +25,48 @@
 require_once('../../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
+global $PAGE, $OUTPUT;
+
 $swaggerversion = '5.17.14';
+
+$swaggercssurl = new moodle_url("https://unpkg.com/swagger-ui-dist@{$swaggerversion}/swagger-ui.css");
+$swaggerbundleurl = new moodle_url("https://unpkg.com/swagger-ui-dist@{$swaggerversion}/swagger-ui-bundle.js");
+$swaggertagspluginurl = new moodle_url('https://unpkg.com/swagger-ui-plugin-hierarchical-tags');
+
+$swaggercsssri = 'sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn';
+$swaggerbundlesri = 'sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep';
+$swaggertagspluginsri = 'sha384-rvitX4iURy1lN2ApXeXTgMMmwYJx9E9uIPW0HrThb+hr1JS8l2UHoPC594DK6Eyk';
 
 $PAGE->set_url('/admin/swaggerui.php');
 
 admin_externalpage_setup('swaggerui');
 
-$PAGE->requires->css(new moodle_url("https://unpkg.com/swagger-ui-dist@{$swaggerversion}/swagger-ui.css"));
-
 echo $OUTPUT->header();
+
+echo html_writer::empty_tag('link', [
+    'rel' => 'stylesheet',
+    'href' => $swaggercssurl,
+    'integrity' => $swaggercsssri,
+    'crossorigin' => 'anonymous',
+]);
 
 // These have to be manually added for now because they must be made cross-origin. The `js` method does not yet support this.
 echo html_writer::tag(
     tagname: 'script',
     contents: '',
     attributes: [
-        'src' => new moodle_url("https://unpkg.com/swagger-ui-dist@{$swaggerversion}/swagger-ui-bundle.js"),
-        'crossorigin' => 'crossorigin',
+        'src' => $swaggerbundleurl,
+        'integrity' => $swaggerbundlesri,
+        'crossorigin' => 'anonymous',
     ],
 );
 echo html_writer::tag(
     tagname: 'script',
     contents: '',
     attributes: [
-        'src' => new moodle_url("https://unpkg.com/swagger-ui-plugin-hierarchical-tags"),
-        'crossorigin' => 'crossorigin',
+        'src' => $swaggertagspluginurl,
+        'integrity' => $swaggertagspluginsri,
+        'crossorigin' => 'anonymous',
     ],
 );
 
