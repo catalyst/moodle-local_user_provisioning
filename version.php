@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * Plugin version and dependency metadata.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -24,10 +26,10 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_user_provisioning';
-$plugin->version = 2026041500;
-$plugin->requires = 2024100700; // Moodle 4.5
+$plugin->version = 2026052800;
+$plugin->requires = 2024100700; // Moodle 4.5.
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->supported = [405, 502];     // A range of branch numbers of supported moodle versions.
+$plugin->supported = [405, 502]; // A range of branch numbers of supported moodle versions.
 $plugin->dependencies = [
-    'local_oauth' => 2023091301
+    'local_oauth' => 2023091301,
 ];
