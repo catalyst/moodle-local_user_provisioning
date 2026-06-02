@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * SCIM REST entry point and route declarations.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -44,11 +46,17 @@ $router->map('GET', '/v2/Schemas', 'local_user_provisioning_get_schemas');
 // User Schema.
 $router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_USER_URN, 'local_user_provisioning_get_userschema');
 // Enterprise User Schema.
-$router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_ENTERPRISE_USER_EXT,
-                'local_user_provisioning_get_entuserschema');
+$router->map(
+    'GET',
+    '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_ENTERPRISE_USER_EXT,
+    'local_user_provisioning_get_entuserschema'
+);
 // Custom Extention Schema - defines custom fields that are not part of SCIM v2.
-$router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_CUSTOM_USER_URN,
-                'local_user_provisioning_get_custuserschema');
+$router->map(
+    'GET',
+    '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_CUSTOM_USER_URN,
+    'local_user_provisioning_get_custuserschema'
+);
 // Filter users.
 $router->map('GET', '/v2/Users', 'local_user_provisioning_get_users');
 // Get user details.
@@ -99,8 +107,11 @@ if ($match && is_callable($target)) {
         if ($body) {
             $data = json_decode($body, true);
             if (json_last_error()) {
-                local_user_provisioning_scim_error_msg(json_last_error_msg(),
-                    get_string('error:badrequest', 'local_user_provisioning'), 400);
+                local_user_provisioning_scim_error_msg(
+                    json_last_error_msg(),
+                    get_string('error:badrequest', 'local_user_provisioning'),
+                    400
+                );
             }
         } else {
             $data = [];

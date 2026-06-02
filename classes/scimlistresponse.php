@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * SCIM user list response class.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,12 +27,11 @@ namespace local_user_provisioning;
 
 /**
  * Class to handle SCIM User list response.
+ * @package local_user_provisioning
  */
 class scimlistresponse extends scimresponse {
-
     /**
-     * Users details.
-     * @resources array
+     * @var array|null User response resources.
      */
     private $resources = null;
 
@@ -44,11 +45,16 @@ class scimlistresponse extends scimresponse {
         $this->resources = $resources;
     }
 
-    protected function extra_data() : array {
-        $json = array();
+    /**
+     * Return list payload as part of SCIM response.
+     *
+     * @return array
+     */
+    protected function extra_data(): array {
+        $json = [];
         foreach ($this->resources as $r) {
             $json[] = $r->extra_data();
         }
-        return array("Resources" => $json, "totalResults" => count($this->resources));
+        return ["Resources" => $json, "totalResults" => count($this->resources)];
     }
 }

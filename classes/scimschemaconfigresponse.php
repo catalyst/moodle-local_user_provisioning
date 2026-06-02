@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * SCIM schema collection response class.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,9 +27,9 @@ namespace local_user_provisioning;
 
 /**
  * Class to handle SCIM response for Service Provider Configuration Schema.
+ * @package local_user_provisioning
  */
 class scimschemaconfigresponse extends scimresponse {
-
     /**
      * Service Provider Configuration Schema constructor
      *
@@ -42,19 +44,23 @@ class scimschemaconfigresponse extends scimresponse {
      *
      * @return array
      */
-    protected function extra_data() : array {
+    protected function extra_data(): array {
         global $CFG;
 
-        return array(
-            "totalResults" => 3,
-            "itemsPerPage" => 3,
-            "startIndex" => 1,
-            "Resources" => array(
-                scimuserschemaconfigresponse::get_extra_data(),
-                scimentschemaconfigresponse::get_extra_data(),
-                scimcustschemaconfigresponse::get_extra_data()
-            )
-        );
-    }
+        $resources = [
+            scimuserschemaconfigresponse::get_extra_data(),
+            scimcustschemaconfigresponse::get_extra_data(),
+        ];
 
+        if (local_user_provisioning_is_moodleworkplace()) {
+            array_splice($resources, 1, 0, [scimentschemaconfigresponse::get_extra_data()]);
+        }
+
+        return [
+            "totalResults" => count($resources),
+            "itemsPerPage" => count($resources),
+            "startIndex" => 1,
+            "Resources" => $resources,
+        ];
+    }
 }

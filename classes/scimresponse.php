@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * Base SCIM response class.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -27,34 +29,35 @@ namespace local_user_provisioning;
  *
  * Abstract class to handle SCIM response.
  *
+ * @package local_user_provisioning
  */
 abstract class scimresponse {
-
-    // SCIM Schema URI's
-    // Schema prefix.
+    /** Schema prefix. */
     const SCIM2_URN = 'urn:ietf:params:scim:api:messages:2.0:';
-    // Service Provider Configuration Schema.
+    /** Service Provider Configuration schema. */
     const SCIM2_CONFIG_URN = 'urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig';
-    // User Resource.
+    /** User resource schema. */
     const SCIM2_USER_URN = 'urn:ietf:params:scim:schemas:core:2.0:User';
-    // Enterprise User Extension.
+    /** Enterprise User extension schema. */
     const SCIM2_ENTERPRISE_USER_EXT = 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User';
-    // Custom extention.
+    /** Custom user extension schema. */
     const SCIM2_CUSTOM_USER_URN = 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User';
-    // List/Query Response.
+    /** List/query response schema. */
     const SCIM2_LISTRESPONSE_URN = 'urn:ietf:params:scim:api:messages:2.0:ListResponse';
 
-    // Array of all the three Schema's that are used.
-    const SCIM2_SCHEMAS = array(self::SCIM2_USER_URN, self::SCIM2_ENTERPRISE_USER_EXT, self::SCIM2_CUSTOM_USER_URN);
-    // Schema version.
+    /** Schemas returned in user responses when Workplace is enabled. */
+    const SCIM2_SCHEMAS_WORKPLACE = [self::SCIM2_USER_URN, self::SCIM2_ENTERPRISE_USER_EXT, self::SCIM2_CUSTOM_USER_URN];
+    /** Schemas returned in user responses for standard Moodle. */
+    const SCIM2_SCHEMAS_MOODLE = [self::SCIM2_USER_URN, self::SCIM2_CUSTOM_USER_URN];
+    /** SCIM API version segment. */
     const SCIM2_VERSION = 'v2';
-    // Date/time the schema was created.
+    /** Schema creation timestamp. */
     const TIMECREATED = '2021-01-27T12:00:00Z';
-    // Date/time the schema was modified.
+    /** Schema modified timestamp. */
     const TIMEMODIFIED = '2021-01-27T12:00:00Z';
 
-    // An array of strings which are the schemas used in the json response - @var array[string] $schemas.
-    private $schemas = array();
+    /** @var string[] SCIM schema URNs used in the JSON response. */
+    private $schemas = [];
 
     /**
      * Set the scim response type of this object.
@@ -64,9 +67,9 @@ abstract class scimresponse {
      * @param string $type A valid scim response type
      * @return void
      */
-    protected function set_response_type(string $type) : void {
+    protected function set_response_type(string $type): void {
 
-        switch($type) {
+        switch ($type) {
             case 'ServiceConfig':
                 $this->schemas[] = static::SCIM2_CONFIG_URN;
                 break;
@@ -74,7 +77,7 @@ abstract class scimresponse {
                 $this->schemas[] = static::SCIM2_LISTRESPONSE_URN;
                 break;
             case 'User':
-                $this->schemas = static::SCIM2_SCHEMAS;
+                $this->schemas = static::get_user_schemas();
                 break;
             case 'UserSchema':
                 $this->schemas = static::SCIM2_USER_URN;
@@ -91,12 +94,21 @@ abstract class scimresponse {
     }
 
     /**
+     * Return user schemas appropriate for this environment.
+     *
+     * @return array
+     */
+    protected static function get_user_schemas(): array {
+        return local_user_provisioning_is_moodleworkplace() ? static::SCIM2_SCHEMAS_WORKPLACE : static::SCIM2_SCHEMAS_MOODLE;
+    }
+
+    /**
      * Return a scim compatible array ready to be converted into json
      *
      * @return array An array ready to be converted into a textual json object
      */
-    public function to_json() : array {
-        $base = array("schemas" => $this->schemas);
+    public function to_json(): array {
+        $base = ["schemas" => $this->schemas];
         return array_merge($base, $this->extra_data());
     }
 
@@ -104,9 +116,8 @@ abstract class scimresponse {
      * Returns SCIM response.
      *
      * @param int $responsecode
-     * @return string
      */
-    public function send_response(int $responsecode) : void {
+    public function send_response(int $responsecode): void {
         static::scim_headers($responsecode);
         print(json_encode($this->to_json(), JSON_UNESCAPED_SLASHES));
     }
@@ -116,8 +127,8 @@ abstract class scimresponse {
      *
      * @return array
      */
-    protected function extra_data() : array {
-        return array();
+    protected function extra_data(): array {
+        return [];
     }
 
     /**
@@ -129,7 +140,7 @@ abstract class scimresponse {
      * @param string  $message      The http status message to use.
      * @return void
      */
-    public static function scim_headers(int $responsecode, string $message=null) : void {
+    public static function scim_headers(int $responsecode, ?string $message = null): void {
 
         http_response_code($responsecode);
         header('Content-Type: application/scim+json');

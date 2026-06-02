@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * SCIM error response class.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,11 +27,17 @@ namespace local_user_provisioning;
 
 /**
  * Class to handle SCIM error response.
+ * @package local_user_provisioning
  */
 class scimerrorresponse extends scimresponse {
-    private $message = ''; // Error message.
-    private $type = ''; // Error type.
-    private $status = 0; // Error Status code.
+    /** @var string Error message. */
+    private $message = '';
+
+    /** @var string Error type. */
+    private $type = '';
+
+    /** @var int Error status code. */
+    private $status = 0;
 
     /**
      * Error response constructor.
@@ -50,11 +58,11 @@ class scimerrorresponse extends scimresponse {
      *
      * @return array
      */
-    protected function extra_data() : array {
-        return array(
+    protected function extra_data(): array {
+        return [
             'status' => $this->status,
             'scimType' => $this->type,
-            'detail' => $this->message
-        );
+            'detail' => $this->message,
+        ];
     }
 }

@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * SCIM custom user schema response class.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,15 +27,15 @@ namespace local_user_provisioning;
 
 /**
  * Class to handle SCIM response for User Custom Extention Schema.
+ * @package local_user_provisioning
  */
 class scimcustschemaconfigresponse extends scimresponse {
-
     /**
      * Custom Extention User Schema constructor.
      *
      * @param $type string
      **/
-    public function __construct($type) {
+    public function __construct(string $type) {
         $this->set_response_type($type);
     }
 
@@ -42,7 +44,7 @@ class scimcustschemaconfigresponse extends scimresponse {
      *
      * @return array
      */
-    public function extra_data() : array {
+    public function extra_data(): array {
         return self::get_extra_data();
     }
 
@@ -51,21 +53,21 @@ class scimcustschemaconfigresponse extends scimresponse {
      *
      * @return array
      */
-    public static function get_extra_data() : array {
+    public static function get_extra_data(): array {
         global $CFG;
 
         $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
 
-        return array(
+        return [
             "id" => static::SCIM2_CUSTOM_USER_URN,
             "name" => "Custom User Extention",
             "description" => "Custom User Schema Extention",
             "attributes" => static::get_customuserattributes(),
-            "meta" => array(
+            "meta" => [
                 "resourceType" => "schemaExtensions",
-                "location" => $locationurl . static::SCIM2_CUSTOM_USER_URN
-            )
-        );
+                "location" => $locationurl . static::SCIM2_CUSTOM_USER_URN,
+            ],
+        ];
     }
 
     /**
@@ -73,21 +75,9 @@ class scimcustschemaconfigresponse extends scimresponse {
      *
      * @return array
      */
-    public static function get_customuserattributes() : array {
-
-        return array(
-            array(
-                "name" => "team",
-                "type" => "string",
-                "multiValued" => false,
-                "required" => false,
-                "caseExact" => false,
-                "mutability" => "readWrite",
-                "returned" => "default",
-                "uniqueness" => "none",
-                "description" => "Custom User profile field - Team"
-            ),
-            array(
+    public static function get_customuserattributes(): array {
+        $attributes = [
+            [
                 "name" => "auth",
                 "type" => "string",
                 "multiValued" => false,
@@ -96,10 +86,14 @@ class scimcustschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "Auth - User Login Authentication. If not supplied, will default to manual.
-                    Values can be email, saml2, oidc or manual"
-            )
-        );
-    }
+                "description" => get_string('attr-auth', 'local_user_provisioning'),
+            ],
+        ];
 
+        foreach (local_user_provisioning_custom_field_registry_all() as $field) {
+            $attributes[] = $field['schema'];
+        }
+
+        return $attributes;
+    }
 }

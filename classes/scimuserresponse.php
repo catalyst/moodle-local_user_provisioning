@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * SCIM user response class.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -26,22 +28,21 @@ use moodle_url;
 
 /**
  * Class to handle SCIM User response.
+ * @package local_user_provisioning
  */
 class scimuserresponse extends scimresponse {
-
     /**
-     * User object
-     * @user object
+     * @var object User object.
      */
     private $user;
+
     /**
-     * User active status
-     * @active bool
+     * @var bool|null User active status.
      */
     private $active = null;
+
     /**
-     * Append user schema info.
-     * @appendschemainfo bool
+     * @var bool Whether to append user schema info.
      */
     private $appendschemainfo = false;
 
@@ -64,60 +65,85 @@ class scimuserresponse extends scimresponse {
      *
      * @return array
      */
-    protected function extra_data() : array {
+    protected function extra_data(): array {
+
+        $isworkplace = local_user_provisioning_is_moodleworkplace();
 
         $manageridnumber = '';
         $manager = '';
         $refurl = '';
-        if ($this->user->managerid) {
+        if ($isworkplace && $this->user->managerid) {
             $manageridnumber = $this->user->manageridnumber;
             $manager = $this->user->managerfirstname . ' ' . $this->user->managerlastname;
-            $refurl = (new moodle_url('/user/profile.php', array('id' => $this->user->managerid)))->out();
+            $refurl = (new moodle_url('/user/profile.php', ['id' => $this->user->managerid]))->out();
         }
-        $returnvar = array(
+
+        $phonenumbers = [];
+        if (!empty($this->user->phone1)) {
+            $phonenumbers[] = [
+                'value' => $this->user->phone1,
+                'type' => 'work',
+            ];
+        }
+        if (!empty($this->user->phone2)) {
+            $phonenumbers[] = [
+                'value' => $this->user->phone2,
+                'type' => 'mobile',
+            ];
+        }
+
+        $returnvar = [
             'id' => $this->user->idnumber,
             'externalId' => $this->user->idnumber,
             'userName' => $this->user->username,
             'displayName' => $this->user->alternatename,
-            'name' => array (
+            'name' => [
                 'givenName' => $this->user->firstname,
-                'familyName' => $this->user->lastname
-            ),
-            'emails' => array(
-                            array(
+                'middleName' => $this->user->middlename,
+                'familyName' => $this->user->lastname,
+            ],
+            'emails' => [
+                            [
                                 'value' => $this->user->email,
                                 'type' => 'work',
-                                'primary' => true
-                            )
-                        ),
+                                'primary' => true,
+                            ],
+                        ],
+            'phoneNumbers' => $phonenumbers,
             'preferredLanguage' => $this->user->lang,
-            'addresses' => array(
-                                array(
+            'organization' => $this->user->institution,
+            'addresses' => [
+                                [
+                                    'streetAddress' => $this->user->address,
                                     'locality' => $this->user->city,
                                     'country' => $this->user->country,
                                     'type' => 'work',
-                                    'primary' => true
-                                )
-                            ),
-            'title' => $this->user->title,
+                                    'primary' => true,
+                                ],
+                            ],
             'department' => $this->user->department,
             'active' => $this->active,
-            static::SCIM2_ENTERPRISE_USER_EXT => array(
-                                                    'manager' => array(
-                                                                    'value' => $manageridnumber,
-                                                                    '$ref' => $refurl,
-                                                                    'displayName' => $manager
-                                                                )
-                                                ),
-            static::SCIM2_CUSTOM_USER_URN => array(
-                                                'auth' => $this->user->auth,
-                                                'team' => $this->user->team
-                                            ),
-            'meta' => $this->get_meta()
-        );
+            static::SCIM2_CUSTOM_USER_URN => [
+                                                'auth' => $this->user->auth ?? null,
+                                            ],
+            'meta' => $this->get_meta(),
+        ];
+
+        if ($isworkplace) {
+            $returnvar['title'] = $this->user->title;
+            $returnvar[static::SCIM2_ENTERPRISE_USER_EXT] = [
+                'manager' => [
+                    'value' => $manageridnumber,
+                    '$ref' => $refurl,
+                    'displayName' => $manager,
+                ],
+            ];
+        }
+
+        $returnvar = local_user_provisioning_custom_append_response_fields($this->user, $returnvar);
 
         if ($this->appendschemainfo) {
-            $returnvar = array('schemas' => static::SCIM2_SCHEMAS) + $returnvar;
+            $returnvar = ['schemas' => static::get_user_schemas()] + $returnvar;
         }
 
         return $returnvar;
@@ -128,14 +154,14 @@ class scimuserresponse extends scimresponse {
      *
      * @return array
      */
-    protected function get_meta() : array {
+    protected function get_meta(): array {
         global $CFG;
-        return array(
+        return [
             'resourceType' => 'User',
             'created' => gmdate("Y-m-d\TH:i:s\Z", $this->user->timecreated),
             'lastModified' => gmdate("Y-m-d\TH:i:s\Z", $this->user->timemodified),
             'location' => $CFG->wwwroot . '/user/view.php?id=' . $this->user->id,
-            'version' => static::SCIM2_VERSION
-        );
+            'version' => static::SCIM2_VERSION,
+        ];
     }
 }

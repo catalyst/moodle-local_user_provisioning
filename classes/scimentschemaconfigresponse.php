@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/*
+/**
+ * SCIM enterprise user schema response class.
+ *
  * @package    local_user_provisioning
  * @copyright  Catalyst IT Europe Ltd 2021
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,9 +27,9 @@ namespace local_user_provisioning;
 
 /**
  * Class to handle SCIM response for User Enterprise Schema.
+ * @package local_user_provisioning
  */
 class scimentschemaconfigresponse extends scimresponse {
-
     /**
      * Enterprise User Schema constructor.
      *
@@ -42,7 +44,7 @@ class scimentschemaconfigresponse extends scimresponse {
      *
      * @return array
      */
-    public function extra_data() : array {
+    public function extra_data(): array {
         return self::get_extra_data();
     }
 
@@ -51,21 +53,21 @@ class scimentschemaconfigresponse extends scimresponse {
      *
      * @return array
      */
-    public static function get_extra_data() : array {
+    public static function get_extra_data(): array {
         global $CFG;
 
         $locationurl = $CFG->wwwroot . SCIM2_BASE_URL . '/' . static::SCIM2_VERSION . '/Schemas/';
 
-        return array(
+        return [
             "id" => static::SCIM2_ENTERPRISE_USER_EXT,
             "name" => "Enterprise User",
             "description" => "Enterprise User Schema",
             "attributes" => static::get_entuserattributes(),
-            "meta" => array(
+            "meta" => [
                 "resourceType" => "Schema",
-                "location" => $locationurl . static::SCIM2_ENTERPRISE_USER_EXT
-            )
-        );
+                "location" => $locationurl . static::SCIM2_ENTERPRISE_USER_EXT,
+            ],
+        ];
     }
 
     /**
@@ -73,10 +75,10 @@ class scimentschemaconfigresponse extends scimresponse {
      *
      * @return array
      */
-    public static function get_entuserattributes() : array {
+    public static function get_entuserattributes(): array {
 
-        return array(
-            array(
+        return [
+            [
                 "name" => "manager",
                 "type" => "complex",
                 "multiValued" => false,
@@ -86,8 +88,8 @@ class scimentschemaconfigresponse extends scimresponse {
                 "uniqueness" => "none",
                 "description" => "The User's manager. A complex type that optionally allows service providers to represent
                     organizational hierarchy by referencing the 'id' attribute of another User. Job assignments - Manager",
-                "subAttributes" => array(
-                    array(
+                "subAttributes" => [
+                    [
                         "name" => "value",
                         "type" => "string",
                         "multiValued" => false,
@@ -96,14 +98,13 @@ class scimentschemaconfigresponse extends scimresponse {
                         "mutability" => "readWrite",
                         "returned" => "default",
                         "uniqueness" => "none",
-                        "referenceTypes" => array(
-                            "User"
-                        ),
-                        "description" => "The URI of the SCIM resource representing the User's manager."
-                    )
-                )
-            )
-        );
+                        "referenceTypes" => [
+                            "User",
+                        ],
+                        "description" => "The URI of the SCIM resource representing the User's manager.",
+                    ],
+                ],
+            ],
+        ];
     }
-
 }
