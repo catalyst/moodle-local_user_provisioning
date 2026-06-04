@@ -38,7 +38,7 @@ class scimlistresponse extends scimresponse {
     /**
      * User List Response constructor.
      *
-     * @param $resources array
+     * @param array $resources
      **/
     public function __construct(array $resources) {
         $this->set_response_type('ListResponse');

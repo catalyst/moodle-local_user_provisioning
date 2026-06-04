@@ -280,7 +280,7 @@ function local_user_provisioning_get_bearertoken(): ?string {
 /**
  * Change int value to true or false.
  *
- * @param int Suspended
+ * @param int $suspended
  * @return bool
  * @package local_user_provisioning
  */
@@ -466,8 +466,8 @@ function local_user_provisioning_get_userquerysql(bool $includeteam = true): str
 /**
  * Filter users
  *
- * @param $json array
- * @param $auth string Authentication
+ * @param array $json
+ * @param string $auth Authentication
  * @return void
  * @package local_user_provisioning
  */
@@ -478,33 +478,36 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
     $invalidfilter = false;
     $resources = [];
     $params = [];
-    $filter = '';
-    if (isset($_GET['filter'])) {
-        $filter = $_GET['filter'];
-    }
+    $filter = optional_param('filter', '', PARAM_TEXT);
 
-    if ($filter != "") {
-        $filter = str_getcsv($_GET['filter'], " ", '"');
+    if ($filter !== '') {
+        $filter = str_getcsv($filter, ' ', '"');
 
-        switch ($filter[0]) {
-            case 'userName':
-                $extrasql .= 'AND u.username ';
-                break;
-            case 'name.familyName':
-                $extrasql .= 'AND u.lastname ';
-                break;
-            case 'name.givenName':
-                $extrasql .= 'AND u.firstname ';
-                break;
-            case 'emails':
-                $extrasql .= 'AND u.email ';
-                break;
-            default:
-                $invalidfilter = true;
-                break;
+        if (count($filter) < 3) {
+            $invalidfilter = true;
         }
 
-        if ($extrasql) {
+        if (!$invalidfilter) {
+            switch ($filter[0]) {
+                case 'userName':
+                    $extrasql .= 'AND u.username ';
+                    break;
+                case 'name.familyName':
+                    $extrasql .= 'AND u.lastname ';
+                    break;
+                case 'name.givenName':
+                    $extrasql .= 'AND u.firstname ';
+                    break;
+                case 'emails':
+                    $extrasql .= 'AND u.email ';
+                    break;
+                default:
+                    $invalidfilter = true;
+                    break;
+            }
+        }
+
+        if ($extrasql && !$invalidfilter) {
             switch ($filter[1]) {
                 case 'sw':
                     $extrasql .= 'LIKE :filter';
@@ -787,7 +790,10 @@ function local_user_provisioning_validate_data(
             case 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User':
                 if (is_array($value)) {
                     foreach ($value as $thiskey => $thisvalue) {
-                        $user->$thiskey = $thisvalue;
+                        // Only assign keys that are registered custom fields; unknown keys (including
+                        // reserved Moodle user properties such as 'id', 'admin', 'auth', 'password')
+                        // are silently ignored, preventing mass assignment via this extension block.
+                        local_user_provisioning_custom_map_inbound_field((string)$thiskey, $thisvalue, $user);
                     }
                 }
                 break;
@@ -921,19 +927,14 @@ function local_user_provisioning_get_country(string $bywhat, string $content): s
 function local_user_provisioning_get_guid(): string {
     global $DB;
 
-    while (true) {
-        $charid = strtoupper(md5(uniqid(rand(), true)));
-        $hyphen = chr(45); // Character hypen (-).
-        $uuid = substr($charid, 0, 8) . $hyphen
-            . substr($charid, 8, 4) . $hyphen
-            . substr($charid, 12, 4) . $hyphen
-            . substr($charid, 16, 4) . $hyphen
-            . substr($charid, 20, 12);
-
-        if (!$DB->get_record('user', ['idnumber' => $uuid])) {
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        $uuid = \core\uuid::generate();
+        if (!$DB->record_exists('user', ['idnumber' => $uuid])) {
             return $uuid;
         }
     }
+
+    throw new \coding_exception('Unable to generate unique user idnumber after 5 attempts.');
 }
 
 /**
@@ -1031,7 +1032,7 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
     $validateuser->secret = random_string(15);
     $validateuser->calendartype = $CFG->calendartype;
 
-    if ($userid = user_create_user($validateuser, false, false)) {
+    if ($userid = user_create_user($validateuser, false)) {
         $validateuser->id = $userid;
 
         // Persist custom profile fields before any optional Workplace operations.
@@ -1340,7 +1341,7 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
     }
 
     // Update user details.
-    user_update_user($user, false, false);
+    user_update_user($user, false);
 
     local_user_provisioning_custom_persist_profile_fields($user);
 
@@ -1381,7 +1382,9 @@ function local_user_provisioning_suspend_user(array $json, string $idnumber, str
     }
 
     if ($userid = $DB->get_field_sql($sql, $params)) {
-        $DB->set_field('user', 'suspended', 1, ['id' => $userid]);
+        $userrecord = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
+        $userrecord->suspended = 1;
+        user_update_user($userrecord, false);
         local_user_provisioning_scim_error_msg(
             get_string('nocontent_help', 'local_user_provisioning', $idnumber),
             get_string('nocontent', 'local_user_provisioning'),

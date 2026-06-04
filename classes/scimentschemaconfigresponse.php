@@ -33,9 +33,9 @@ class scimentschemaconfigresponse extends scimresponse {
     /**
      * Enterprise User Schema constructor.
      *
-     * @param $type string
+     * @param string $type
      **/
-    public function __construct($type) {
+    public function __construct(string $type) {
         $this->set_response_type($type);
     }
 

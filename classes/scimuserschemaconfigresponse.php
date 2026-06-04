@@ -33,7 +33,7 @@ class scimuserschemaconfigresponse extends scimresponse {
     /**
      * User Schema constructor
      *
-     * @param $type string
+     * @param string $type
      **/
     public function __construct(string $type) {
         $this->set_response_type($type);

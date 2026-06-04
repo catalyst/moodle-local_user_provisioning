@@ -94,6 +94,28 @@ function local_user_provisioning_custom_get_or_create_profilefieldid(
 }
 
 /**
+ * Get existing profile field records keyed by shortname.
+ *
+ * @param array $shortnames
+ * @return array
+ * @package local_user_provisioning
+ */
+function local_user_provisioning_custom_get_profilefields_by_shortnames(array $shortnames): array {
+    global $DB;
+
+    $shortnames = array_values(array_unique(array_filter(array_map('strval', $shortnames), static function(string $name): bool {
+        return trim($name) !== '';
+    })));
+
+    if (empty($shortnames)) {
+        return [];
+    }
+
+    [$insql, $params] = $DB->get_in_or_equal($shortnames, SQL_PARAMS_NAMED);
+    return $DB->get_records_select('user_info_field', "shortname {$insql}", $params, '', 'id,shortname,forceunique');
+}
+
+/**
  * Check if a profile field is configured as unique in Moodle UI.
  *
  * @param int $fieldid
@@ -164,7 +186,28 @@ function local_user_provisioning_custom_create_profilefieldid(
  */
 function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
     $globalregistry = local_user_provisioning_custom_field_registry();
+
+    $tenants = [];
+    if (\local_user_provisioning\local_user_provisioning_is_moodleworkplace()) {
+        $tenants = \tool_tenant\tenant::get_records(['archived' => 0]);
+    }
+
+    $allshortnames = array_column($globalregistry, 'shortname');
+    foreach ($tenants as $tenant) {
+        $tenantid = (int)$tenant->get('id');
+        $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
+        foreach ($tenantregistry as $field) {
+            $allshortnames[] = $field['shortname'];
+        }
+    }
+
+    $existingfields = local_user_provisioning_custom_get_profilefields_by_shortnames($allshortnames);
+
     foreach ($globalregistry as $field) {
+        if (!empty($existingfields[$field['shortname']])) {
+            continue;
+        }
+
         local_user_provisioning_custom_create_profilefieldid(
             $field['shortname'],
             $field['name'],
@@ -172,15 +215,14 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
             'text',
             USERPROFILEFIELDCATEGORY
         );
+
+        $existingfields[$field['shortname']] = (object)['shortname' => $field['shortname']];
     }
 
-    if (
-        !\local_user_provisioning\local_user_provisioning_is_moodleworkplace()
-    ) {
+    if (empty($tenants)) {
         return;
     }
 
-    $tenants = \tool_tenant\tenant::get_records(['archived' => 0]);
     foreach ($tenants as $tenant) {
         $tenantid = (int)$tenant->get('id');
         $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
@@ -192,6 +234,10 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
         local_user_provisioning_custom_get_or_create_categoryid($tenantcategory);
 
         foreach ($tenantregistry as $field) {
+            if (!empty($existingfields[$field['shortname']])) {
+                continue;
+            }
+
             local_user_provisioning_custom_create_profilefieldid(
                 $field['shortname'],
                 $field['name'],
@@ -199,6 +245,8 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
                 'text',
                 $tenantcategory
             );
+
+            $existingfields[$field['shortname']] = (object)['shortname' => $field['shortname']];
         }
     }
 }

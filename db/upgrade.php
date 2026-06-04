@@ -63,6 +63,7 @@ function xmldb_local_user_provisioning_upgrade($oldversion): bool {
                     }
                     $newconfigtext .= $newentry;
 
+                    // One-time upgrade write, only for tenants that still miss the team entry.
                     set_config($configkey, $newconfigtext, 'local_user_provisioning');
                 }
             } else {

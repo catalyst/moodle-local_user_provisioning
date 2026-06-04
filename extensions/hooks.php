@@ -79,13 +79,16 @@ function local_user_provisioning_custom_user_schema_attributes(): array {
  * @package local_user_provisioning
  */
 function local_user_provisioning_custom_add_userquery_fields_and_joins(string &$fields, string &$join): void {
+    $registry = local_user_provisioning_custom_field_registry();
+    $shortnames = array_column($registry, 'shortname');
+    $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
+
     $index = 1;
-    foreach (local_user_provisioning_custom_field_registry() as $key => $field) {
-        $fieldid = local_user_provisioning_custom_get_or_create_profilefieldid($field['shortname']);
-        if (!$fieldid) {
+    foreach ($registry as $key => $field) {
+        if (empty($profilefields[$field['shortname']])) {
             continue;
         }
-        $fieldid = (int)$fieldid;
+        $fieldid = (int)$profilefields[$field['shortname']]->id;
         $alias = 'uidc' . $index;
         $fields .= ', ' . $alias . '.data AS ' . $key;
         $join .= ' LEFT JOIN {user_info_data} ' . $alias . ' ON u.id = ' . $alias . '.userid'
@@ -147,20 +150,28 @@ function local_user_provisioning_custom_map_patch_field(string $path, $value, ob
  */
 function local_user_provisioning_custom_validate_before_create(object $user): array {
     $errors = [];
+    $registry = local_user_provisioning_custom_field_registry();
+    $shortnames = array_column($registry, 'shortname');
+    $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
 
-    foreach (local_user_provisioning_custom_field_registry() as $key => $field) {
+    foreach ($registry as $key => $field) {
         if (!$field['unique'] || !isset($user->{$key})) {
             continue;
         }
 
-        $fieldid = local_user_provisioning_custom_get_or_create_profilefieldid($field['shortname']);
+        if (empty($profilefields[$field['shortname']])) {
+            continue;
+        }
 
-        if ($fieldid && !local_user_provisioning_custom_profilefield_is_unique($fieldid)) {
+        $fieldid = (int)$profilefields[$field['shortname']]->id;
+        $forceunique = !empty($profilefields[$field['shortname']]->forceunique);
+
+        if (!$forceunique) {
             $errors[] = get_string('error:customfieldnotunique', 'local_user_provisioning', (object)['field' => $key]);
             continue;
         }
 
-        if ($fieldid && local_user_provisioning_custom_profilefield_value_exists($user->{$key}, $fieldid)) {
+        if (local_user_provisioning_custom_profilefield_value_exists($user->{$key}, $fieldid)) {
             $errors[] = get_string('error:customfieldexists', 'local_user_provisioning', (object)['field' => $key]);
         }
     }
@@ -177,20 +188,28 @@ function local_user_provisioning_custom_validate_before_create(object $user): ar
  */
 function local_user_provisioning_custom_validate_before_update(object $user): array {
     $errors = [];
+    $registry = local_user_provisioning_custom_field_registry();
+    $shortnames = array_column($registry, 'shortname');
+    $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
 
-    foreach (local_user_provisioning_custom_field_registry() as $key => $field) {
+    foreach ($registry as $key => $field) {
         if (!$field['unique'] || !isset($user->{$key})) {
             continue;
         }
 
-        $fieldid = local_user_provisioning_custom_get_or_create_profilefieldid($field['shortname']);
+        if (empty($profilefields[$field['shortname']])) {
+            continue;
+        }
 
-        if ($fieldid && !local_user_provisioning_custom_profilefield_is_unique($fieldid)) {
+        $fieldid = (int)$profilefields[$field['shortname']]->id;
+        $forceunique = !empty($profilefields[$field['shortname']]->forceunique);
+
+        if (!$forceunique) {
             $errors[] = get_string('error:customfieldnotunique', 'local_user_provisioning', (object)['field' => $key]);
             continue;
         }
 
-        if ($fieldid && local_user_provisioning_custom_profilefield_value_exists($user->{$key}, $fieldid, $user->id)) {
+        if (local_user_provisioning_custom_profilefield_value_exists($user->{$key}, $fieldid, $user->id)) {
             $errors[] = get_string('error:customfieldexists', 'local_user_provisioning', (object)['field' => $key]);
         }
     }
@@ -206,16 +225,21 @@ function local_user_provisioning_custom_validate_before_update(object $user): ar
  * @package local_user_provisioning
  */
 function local_user_provisioning_custom_persist_profile_fields(object $user): void {
-    foreach (local_user_provisioning_custom_field_registry() as $key => $field) {
+    $registry = local_user_provisioning_custom_field_registry();
+    $shortnames = array_column($registry, 'shortname');
+    $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
+
+    foreach ($registry as $key => $field) {
         if (!isset($user->{$key})) {
             continue;
         }
 
-        $fieldid = local_user_provisioning_custom_get_or_create_profilefieldid($field['shortname']);
-
-        if ($fieldid) {
-            local_user_provisioning_custom_set_profilefield_value($user->id, $fieldid, $user->{$key});
+        if (empty($profilefields[$field['shortname']])) {
+            continue;
         }
+
+        $fieldid = (int)$profilefields[$field['shortname']]->id;
+        local_user_provisioning_custom_set_profilefield_value($user->id, $fieldid, $user->{$key});
     }
 }
 

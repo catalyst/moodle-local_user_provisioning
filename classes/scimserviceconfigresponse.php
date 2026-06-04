@@ -30,11 +30,14 @@ namespace local_user_provisioning;
  * @package local_user_provisioning
  */
 class scimserviceconfigresponse extends scimresponse {
+    /** @var string Authentication scheme. */
+    private $auth = 'oauthbearertoken';
+
     /**
      * User Schema constructor.
      *
-     * @param $type string Scheme response type
-     * @param $auth Authentication
+     * @param string $type Scheme response type.
+     * @param string $auth Authentication scheme.
      **/
     public function __construct(string $type, string $auth = 'oauthbearertoken') {
         $this->set_response_type($type);
@@ -86,7 +89,7 @@ class scimserviceconfigresponse extends scimresponse {
     /**
      * Return metadata as part of this SCIM response.
      *
-     * @param $auth string Authentication
+     * @param string $auth Authentication
      * @return array
      */
     protected function get_meta(string $auth): array {

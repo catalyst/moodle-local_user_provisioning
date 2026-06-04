@@ -39,7 +39,7 @@ class workplace_helper {
     public tenant $tenant;
 
     /**
-     * @var string token associated woth the client_id.
+     * @var string token associated with the client_id.
      */
     private string $bearertoken;
 
@@ -95,8 +95,8 @@ class workplace_helper {
      * Add/update/delete manager for a user.
      * MWP supports more than 1 manager, but we are going to limit this over the API to 1 manager per user.
      *
-    * If the managerid argument is null then remove all managers.
-    * If the managerid argument is not null then remove all existing managers and add exactly one.
+     * If the managerid argument is null then remove all managers.
+     * If the managerid argument is not null then remove all existing managers and add exactly one.
      *
      * @param int $userid
      * @param int|null $managerid
@@ -118,6 +118,7 @@ class workplace_helper {
             order: 'id DESC'
         );
 
+        // The API exposes per-manager delete only; manager count is intentionally bounded to small sets here.
         // Always clear existing assignments first so we end up with zero or one manager only.
         foreach ($usermanagerrecords as $usermanagerrecord) {
             user_manager::delete_assigned_manager($userid, $usermanagerrecord->get('managerid'));
@@ -193,6 +194,7 @@ class workplace_helper {
         // Keep the most recent job using same pos and dept and set the enddate for any other jobs if we have any.
         $mostrecentjobfound = false;
         $allcurrentjobs = job::get_records(['enddate' => 0, 'tenantid' => $tenantid, 'userid' => $userid], order: 'id DESC');
+        // Job counts per user are expected to be small; close non-current jobs one by one via persistent API.
         foreach ($allcurrentjobs as $currentjob) {
             $samejobcombo = (int)$currentjob->get('positionid') === (int)$pos->get('id') &&
                 (int)$currentjob->get('departmentid') === (int)$dept->get('id');

@@ -42,9 +42,9 @@ class scimerrorresponse extends scimresponse {
     /**
      * Error response constructor.
      *
-     * @param $message string
-     * @param $type string
-     * @param $status int
+     * @param string $message
+     * @param string $type
+     * @param int $status
      **/
     public function __construct(string $message, string $type, int $status) {
         $this->set_response_type('Error');
