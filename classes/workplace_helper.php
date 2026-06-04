@@ -58,7 +58,7 @@ class workplace_helper {
      *
      * @return tenant
      */
-    public function get_tenant(): tenant {
+    public function get_tenant(bool $sendscimerror = true): tenant {
         global $DB;
 
         if (!empty($this->tenant)) {
@@ -72,8 +72,10 @@ class workplace_helper {
         );
 
         if (!$tenant = tenant::get_record(['idnumber' => $tenantidnumber])) {
+            if (!$sendscimerror) {
+                throw new \coding_exception('Tenant resolution failed.');
+            }
             local_user_provisioning_scim_error_msg(get_string('error:notenant', 'local_user_provisioning'), '');
-            throw new \coding_exception('Tenant resolution failed after SCIM error response.');
         }
 
         $this->tenant = $tenant;
@@ -86,9 +88,9 @@ class workplace_helper {
      * @param int $userid user id.
      * @return void
      */
-    public function update_user_tenant(int $userid): void {
+    public function update_user_tenant(int $userid, bool $sendscimerror = true): void {
         $tenantmanager = new \tool_tenant\manager();
-        $tenantmanager->allocate_user($userid, $this->get_tenant()->get('id'), 'local_user_provisioning', SCIM_VERSION);
+        $tenantmanager->allocate_user($userid, $this->get_tenant($sendscimerror)->get('id'), 'local_user_provisioning', SCIM_VERSION);
     }
 
     /**
@@ -102,7 +104,7 @@ class workplace_helper {
      * @param int|null $managerid
      * @return void
      */
-    public function update_user_manager(int $userid, ?int $managerid = null) {
+    public function update_user_manager(int $userid, ?int $managerid = null, bool $sendscimerror = true) {
 
         // Define octal permissions.
         $permissions = organisation::PERM_ALLOCATE_PROGRAMS
@@ -113,7 +115,7 @@ class workplace_helper {
         $usermanagerrecords = \tool_organisation\local\persistent\user_manager::get_records(
             filters: [
                 'userid' => $userid,
-                'tenantid' => $this->get_tenant()->get('id'),
+                'tenantid' => $this->get_tenant($sendscimerror)->get('id'),
             ],
             order: 'id DESC'
         );
@@ -146,10 +148,10 @@ class workplace_helper {
      * @param string $posname of the position to match on and assign.
      * @return void
      */
-    public function assign_job(int $userid, string $posname = ''): void {
+    public function assign_job(int $userid, string $posname = '', bool $sendscimerror = true): void {
 
         $currenttime = time();
-        $tenantid = $this->get_tenant()->get('id');
+        $tenantid = $this->get_tenant($sendscimerror)->get('id');
 
         $jobmanager = new \tool_organisation\job_manager();
         $newjob = new stdClass();
@@ -157,13 +159,16 @@ class workplace_helper {
         $newjob->userid = $userid;
         $newjob->startdate = helper::round_time($currenttime);
 
-        $deptframeid = $this->get_department_framework_id();
-        $posframeid = $this->get_position_framework_id();
+        $deptframeid = $this->get_department_framework_id($sendscimerror);
+        $posframeid = $this->get_position_framework_id($sendscimerror);
 
         // Find the most recent position in the configured framework by name.
         $positions = position::get_records(['name' => $posname, 'parentid' => $posframeid], order: 'id DESC');
         $pos = reset($positions);
         if (!$pos) {
+            if (!$sendscimerror) {
+                throw new \coding_exception('Position resolution failed.');
+            }
             local_user_provisioning_scim_error_msg(
                 get_string(
                     'error:nopositionfound',
@@ -173,12 +178,14 @@ class workplace_helper {
                 'invalidValue',
                 400
             );
-            throw new \coding_exception('Position resolution failed after SCIM error response.');
         }
 
         // Find the department in the framework that matches the tenant idnumber.
         $tenant = tenant::get_record(['id' => $tenantid], MUST_EXIST);
         if (!$dept = \tool_organisation\department::get_record(['idnumber' => $tenant->get('idnumber')])) {
+            if (!$sendscimerror) {
+                throw new \coding_exception('Department resolution failed.');
+            }
             local_user_provisioning_scim_error_msg(
                 get_string(
                     'error:nodeptfound',
@@ -188,7 +195,6 @@ class workplace_helper {
                 'invalidValue',
                 400
             );
-            throw new \coding_exception('Department resolution failed after SCIM error response.');
         }
 
         // Keep the most recent job using same pos and dept and set the enddate for any other jobs if we have any.
@@ -222,8 +228,8 @@ class workplace_helper {
      *
      * @return int
      */
-    public function get_department_framework_id(): int {
-        return $this->get_framework_id('department');
+    public function get_department_framework_id(bool $sendscimerror = true): int {
+        return $this->get_framework_id('department', $sendscimerror);
     }
 
     /**
@@ -231,8 +237,8 @@ class workplace_helper {
      *
      * @return int
      */
-    public function get_position_framework_id(): int {
-        return $this->get_framework_id('position');
+    public function get_position_framework_id(bool $sendscimerror = true): int {
+        return $this->get_framework_id('position', $sendscimerror);
     }
 
     /**
@@ -241,36 +247,42 @@ class workplace_helper {
      * @param string $type
      * @return int
      */
-    protected function get_framework_id(string $type): int {
+    protected function get_framework_id(string $type, bool $sendscimerror = true): int {
 
-        $tenantid = $this->get_tenant()->get('id');
+        $tenantid = $this->get_tenant($sendscimerror)->get('id');
 
         if (!$configframeid = get_config('local_user_provisioning', "tenant_{$tenantid}_{$type}")) {
+            if (!$sendscimerror) {
+                throw new \coding_exception('Framework configuration missing.');
+            }
             local_user_provisioning_scim_error_msg(
                 get_string("error:no{$type}frameset", 'local_user_provisioning'),
                 'invalidValue',
                 400
             );
-            throw new \coding_exception('Framework configuration missing after SCIM error response.');
         }
         $class = "\\tool_organisation\\{$type}";
 
         if (!class_exists($class)) {
+            if (!$sendscimerror) {
+                throw new \coding_exception('Organisation class missing.');
+            }
             local_user_provisioning_scim_error_msg(
                 get_string("error:orgclass", 'local_user_provisioning', $class),
                 'invalidValue',
                 400
             );
-            throw new \coding_exception('Organisation class missing after SCIM error response.');
         }
 
         if (!$class::record_exists($configframeid)) {
+            if (!$sendscimerror) {
+                throw new \coding_exception('Framework record missing.');
+            }
             local_user_provisioning_scim_error_msg(
                 get_string("error:no{$type}frame", 'local_user_provisioning', $configframeid),
                 'invalidValue',
                 400
             );
-            throw new \coding_exception('Framework record missing after SCIM error response.');
         }
         return $configframeid;
     }

@@ -251,8 +251,10 @@ if ($isworkplace) {
       . "    - department maps to the Moodle user profile department text field.\n"
     . "    - when title is provided, job-assignment prerequisites must be resolvable "
     . "(frameworks, position, department) or the API returns 400 invalidValue.\n"
-    . "    - on create requests, user creation occurs before Workplace job assignment; "
-    . "if job assignment fails, the user may already exist.";
+    . "    - create requests are handled transactionally across user/profile/workplace DB writes; "
+    . "if any step fails, the API fails and DB changes are rolled back.\n"
+    . "    - non-DB side effects (for example event observers or outbound notifications triggered by core APIs) "
+    . "may still occur and are not rolled back by the DB transaction.";
 }
 
 $customfieldshapeblock = "\n    Custom fields payload shape:\n"

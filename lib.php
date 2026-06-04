@@ -1032,7 +1032,14 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
     $validateuser->secret = random_string(15);
     $validateuser->calendartype = $CFG->calendartype;
 
-    if ($userid = user_create_user($validateuser, false)) {
+    $transaction = $DB->start_delegated_transaction();
+
+    try {
+        $userid = user_create_user($validateuser, false);
+        if (!$userid) {
+            throw new \coding_exception('User creation failed.');
+        }
+
         $validateuser->id = $userid;
 
         // Persist custom profile fields before any optional Workplace operations.
@@ -1041,10 +1048,10 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         if (local_user_provisioning_is_moodleworkplace()) {
             // Do the workplace updates.
             $wphelper = new workplace_helper(local_user_provisioning_get_bearertoken());
-            $wphelper->update_user_tenant($userid);
-            $wphelper->update_user_manager($userid, $validateuser->newmanagerid ?? null);
+            $wphelper->update_user_tenant($userid, false);
+            $wphelper->update_user_manager($userid, $validateuser->newmanagerid ?? null, false);
             if (!empty($validateuser->jobassignmentrequested)) {
-                $wphelper->assign_job($userid, $validateuser->newposition ?? '');
+                $wphelper->assign_job($userid, $validateuser->newposition ?? '', false);
             }
         }
 
@@ -1056,8 +1063,31 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
             set_user_preference('auth_forcepasswordchange', 1, $userid);
         }
 
+        $transaction->allow_commit();
+
         // Process SCIM Response.
         local_user_provisioning_scimresponse($validateuser->idnumber, 201);
+    } catch (\Throwable $e) {
+        try {
+            $transaction->rollback($e);
+        } catch (\Throwable $ignored) {
+            // Rollback already handled by delegated transaction manager.
+        }
+
+        // A concurrent request may have inserted the same username between pre-check and write.
+        if (!empty($validateuser->username) && $DB->record_exists('user', ['username' => $validateuser->username])) {
+            local_user_provisioning_scim_error_msg(
+                get_string('error:userexists', 'local_user_provisioning'),
+                'uniqueness',
+                409
+            );
+        }
+
+        local_user_provisioning_scim_error_msg(
+            get_string('error:badrequest_help', 'local_user_provisioning'),
+            'invalidValue',
+            400
+        );
     }
 }
 
@@ -1340,21 +1370,52 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
         return;
     }
 
-    // Update user details.
-    user_update_user($user, false);
+    $transaction = $DB->start_delegated_transaction();
 
-    local_user_provisioning_custom_persist_profile_fields($user);
+    try {
+        // Update user details.
+        user_update_user($user, false);
 
-    if (local_user_provisioning_is_moodleworkplace()) {
-        // Do the workplace updates.
-        $wphelper = new workplace_helper(local_user_provisioning_get_bearertoken());
-        // Newmanagerid will be set with a legitimate id if adding/updating or null if removing.
-        if (isset($user->newmanagerid)) {
-            $wphelper->update_user_manager($user->id, $user->newmanagerid);
+        local_user_provisioning_custom_persist_profile_fields($user);
+
+        if (local_user_provisioning_is_moodleworkplace()) {
+            // Do the workplace updates.
+            $wphelper = new workplace_helper(local_user_provisioning_get_bearertoken());
+            // Newmanagerid will be set with a legitimate id if adding/updating or null if removing.
+            if (isset($user->newmanagerid)) {
+                $wphelper->update_user_manager($user->id, $user->newmanagerid, false);
+            }
+            if (!empty($user->jobassignmentrequested)) {
+                $wphelper->assign_job($user->id, $user->newposition ?? '', false);
+            }
         }
-        if (!empty($user->jobassignmentrequested)) {
-            $wphelper->assign_job($user->id, $user->newposition ?? '');
+
+        $transaction->allow_commit();
+    } catch (\Throwable $e) {
+        try {
+            $transaction->rollback($e);
+        } catch (\Throwable $ignored) {
+            // Rollback already handled by delegated transaction manager.
         }
+
+        // A concurrent request may claim the username between pre-check and write.
+        if (!empty($user->username) && $DB->record_exists_select(
+            'user',
+            'username = :username AND id <> :id',
+            ['username' => $user->username, 'id' => $user->id]
+        )) {
+            local_user_provisioning_scim_error_msg(
+                get_string('error:userexists', 'local_user_provisioning'),
+                'uniqueness',
+                409
+            );
+        }
+
+        local_user_provisioning_scim_error_msg(
+            get_string('error:badrequest_help', 'local_user_provisioning'),
+            'invalidValue',
+            400
+        );
     }
 }
 
