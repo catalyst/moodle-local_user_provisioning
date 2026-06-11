@@ -67,7 +67,7 @@ class scimuserresponse extends scimresponse {
      */
     protected function extra_data(): array {
 
-        $isworkplace = local_user_provisioning_is_moodleworkplace();
+        $isworkplace = is_moodleworkplace();
 
         $manageridnumber = '';
         $manager = '';
@@ -140,7 +140,7 @@ class scimuserresponse extends scimresponse {
             ];
         }
 
-        $returnvar = local_user_provisioning_custom_append_response_fields($this->user, $returnvar);
+        $returnvar = custom_append_response_fields($this->user, $returnvar);
 
         if ($this->appendschemainfo) {
             $returnvar = ['schemas' => static::get_user_schemas()] + $returnvar;

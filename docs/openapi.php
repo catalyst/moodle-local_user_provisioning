@@ -37,7 +37,7 @@ header('Content-Type: text/yaml');
  * @param string $value
  * @return string
  */
-function local_user_provisioning_openapi_yaml_quote(string $value): string {
+function openapi_yaml_quote(string $value): string {
     return "'" . str_replace("'", "''", $value) . "'";
 }
 
@@ -46,8 +46,8 @@ function local_user_provisioning_openapi_yaml_quote(string $value): string {
  *
  * @return string
  */
-function local_user_provisioning_openapi_custom_fields_yaml(): string {
-    $registry = \local_user_provisioning\local_user_provisioning_custom_field_registry();
+function openapi_custom_fields_yaml(): string {
+    $registry = \local_user_provisioning\custom_field_registry();
 
     if (empty($registry)) {
         return "      additionalProperties: false\n";
@@ -58,13 +58,13 @@ function local_user_provisioning_openapi_custom_fields_yaml(): string {
         $label = $field['name'] ?? $name;
         $yaml .= "        {$name}:\n";
         $yaml .= "          type: string\n";
-        $yaml .= "          description: " . local_user_provisioning_openapi_yaml_quote((string)$label) . "\n";
-        $yaml .= "          example: " . local_user_provisioning_openapi_yaml_quote($name) . "\n";
+        $yaml .= "          description: " . openapi_yaml_quote((string)$label) . "\n";
+        $yaml .= "          example: " . openapi_yaml_quote($name) . "\n";
     }
 
     $yaml .= "      example:\n";
     foreach ($registry as $name => $field) {
-        $yaml .= "        {$name}: " . local_user_provisioning_openapi_yaml_quote($name) . "\n";
+        $yaml .= "        {$name}: " . openapi_yaml_quote($name) . "\n";
     }
 
     return $yaml;
@@ -75,15 +75,15 @@ function local_user_provisioning_openapi_custom_fields_yaml(): string {
  *
  * @return string
  */
-function local_user_provisioning_openapi_custom_fields_post_example_yaml(): string {
-    $registry = \local_user_provisioning\local_user_provisioning_custom_field_registry_all();
+function openapi_custom_fields_post_example_yaml(): string {
+    $registry = \local_user_provisioning\custom_field_registry_all();
     $yaml = '';
 
     foreach ($registry as $name => $field) {
         if ($name === 'auth') {
             continue;
         }
-        $yaml .= "                {$name}: " . local_user_provisioning_openapi_yaml_quote($name) . "\n";
+        $yaml .= "                {$name}: " . openapi_yaml_quote($name) . "\n";
     }
 
     $yaml .= "                tenantSpecificAttribute: tenant-specific-value\n";
@@ -97,7 +97,7 @@ function local_user_provisioning_openapi_custom_fields_post_example_yaml(): stri
  * @param string $scimtype
  * @return string
  */
-function local_user_provisioning_openapi_type(string $scimtype): string {
+function openapi_type(string $scimtype): string {
     if ($scimtype === 'boolean') {
         return 'boolean';
     }
@@ -113,7 +113,7 @@ function local_user_provisioning_openapi_type(string $scimtype): string {
  * @param bool $isworkplace
  * @return string
  */
-function local_user_provisioning_openapi_userbase_yaml(bool $isworkplace): string {
+function openapi_userbase_yaml(bool $isworkplace): string {
     $attributes = \local_user_provisioning\scimuserschemaconfigresponse::get_userattributes();
 
     $overrides = [
@@ -137,7 +137,7 @@ function local_user_provisioning_openapi_userbase_yaml(bool $isworkplace): strin
 
     foreach ($attributes as $attribute) {
         $name = $attribute['name'];
-        $type = local_user_provisioning_openapi_type($attribute['type']);
+        $type = openapi_type($attribute['type']);
         $description = $overrides[$name] ?? ($attribute['description'] ?? '');
 
         if (!empty($attribute['required'])) {
@@ -153,7 +153,7 @@ function local_user_provisioning_openapi_userbase_yaml(bool $isworkplace): strin
             $yaml .= "            properties:\n";
             foreach (($attribute['subAttributes'] ?? []) as $subattr) {
                 $subname = $subattr['name'];
-                $subtype = local_user_provisioning_openapi_type($subattr['type']);
+                $subtype = openapi_type($subattr['type']);
                 $yaml .= "              {$subname}:\n";
                 $yaml .= "                type: {$subtype}\n";
 
@@ -191,7 +191,7 @@ function local_user_provisioning_openapi_userbase_yaml(bool $isworkplace): strin
             $yaml .= "          properties:\n";
             foreach (($attribute['subAttributes'] ?? []) as $subattr) {
                 $subname = $subattr['name'];
-                $subtype = local_user_provisioning_openapi_type($subattr['type']);
+                $subtype = openapi_type($subattr['type']);
                 $yaml .= "            {$subname}:\n";
                 $yaml .= "              type: {$subtype}\n";
             }
@@ -200,7 +200,7 @@ function local_user_provisioning_openapi_userbase_yaml(bool $isworkplace): strin
         }
 
         if ($description !== '') {
-            $yaml .= "          description: " . local_user_provisioning_openapi_yaml_quote($description) . "\n";
+            $yaml .= "          description: " . openapi_yaml_quote($description) . "\n";
         }
 
         if ($isworkplace && $name === 'title') {
@@ -227,10 +227,10 @@ function local_user_provisioning_openapi_userbase_yaml(bool $isworkplace): strin
 $scimbase = $CFG->wwwroot .
     '/local/user_provisioning/scim/rest.php/v2';
 
-$customfieldsyaml = local_user_provisioning_openapi_custom_fields_yaml();
-$customfieldsexampleyaml = local_user_provisioning_openapi_custom_fields_post_example_yaml();
-$isworkplace = \local_user_provisioning\local_user_provisioning_is_moodleworkplace();
-$userbaseyaml = local_user_provisioning_openapi_userbase_yaml($isworkplace);
+$customfieldsyaml = openapi_custom_fields_yaml();
+$customfieldsexampleyaml = openapi_custom_fields_post_example_yaml();
+$isworkplace = \local_user_provisioning\is_moodleworkplace();
+$userbaseyaml = openapi_userbase_yaml($isworkplace);
 $titlefield = $isworkplace ? "              title: Programme Officer\n" : '';
 $enterpriseschemaurn = $isworkplace
   ? "                - urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\n"

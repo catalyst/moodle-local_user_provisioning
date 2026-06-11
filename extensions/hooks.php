@@ -38,8 +38,8 @@ require_once(__DIR__ . '/profile_fields.php');
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_fields_updated(): void {
-    local_user_provisioning_custom_ensure_profile_fields_exist();
+function custom_fields_updated(): void {
+    custom_ensure_profile_fields_exist();
 
     static $feedbackshown = false;
     if ($feedbackshown) {
@@ -47,7 +47,7 @@ function local_user_provisioning_custom_fields_updated(): void {
     }
     $feedbackshown = true;
 
-    $duplicates = local_user_provisioning_custom_duplicate_field_keys();
+    $duplicates = custom_duplicate_field_keys();
     if (!empty($duplicates)) {
         $keys = implode(', ', array_keys($duplicates));
         \core\notification::warning(
@@ -62,9 +62,9 @@ function local_user_provisioning_custom_fields_updated(): void {
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_user_schema_attributes(): array {
+function custom_user_schema_attributes(): array {
     $attributes = [];
-    foreach (local_user_provisioning_custom_field_registry() as $field) {
+    foreach (custom_field_registry() as $field) {
         $attributes[] = $field['schema'];
     }
     return $attributes;
@@ -78,10 +78,10 @@ function local_user_provisioning_custom_user_schema_attributes(): array {
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_add_userquery_fields_and_joins(string &$fields, string &$join): void {
-    $registry = local_user_provisioning_custom_field_registry();
+function custom_add_userquery_fields_and_joins(string &$fields, string &$join): void {
+    $registry = custom_field_registry();
     $shortnames = array_column($registry, 'shortname');
-    $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
+    $profilefields = custom_get_profilefields_by_shortnames($shortnames);
 
     $index = 1;
     foreach ($registry as $key => $field) {
@@ -106,8 +106,8 @@ function local_user_provisioning_custom_add_userquery_fields_and_joins(string &$
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_map_inbound_field(string $key, $value, object $user): bool {
-    $registry = local_user_provisioning_custom_field_registry();
+function custom_map_inbound_field(string $key, $value, object $user): bool {
+    $registry = custom_field_registry();
     if (!array_key_exists($key, $registry)) {
         return false;
     }
@@ -125,7 +125,7 @@ function local_user_provisioning_custom_map_inbound_field(string $key, $value, o
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_map_patch_field(string $path, $value, object $user): bool {
+function custom_map_patch_field(string $path, $value, object $user): bool {
     $prefixes = [
         scimresponse::SCIM2_CUSTOM_USER_URN . ':',
         scimresponse::SCIM2_CUSTOM_USER_URN . '.',
@@ -138,7 +138,7 @@ function local_user_provisioning_custom_map_patch_field(string $path, $value, ob
         }
     }
 
-    return local_user_provisioning_custom_map_inbound_field($path, $value, $user);
+    return custom_map_inbound_field($path, $value, $user);
 }
 
 /**
@@ -148,11 +148,11 @@ function local_user_provisioning_custom_map_patch_field(string $path, $value, ob
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_validate_before_create(object $user): array {
+function custom_validate_before_create(object $user): array {
     $errors = [];
-    $registry = local_user_provisioning_custom_field_registry();
+    $registry = custom_field_registry();
     $shortnames = array_column($registry, 'shortname');
-    $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
+    $profilefields = custom_get_profilefields_by_shortnames($shortnames);
 
     foreach ($registry as $key => $field) {
         if (!$field['unique'] || !isset($user->{$key})) {
@@ -171,7 +171,7 @@ function local_user_provisioning_custom_validate_before_create(object $user): ar
             continue;
         }
 
-        if (local_user_provisioning_custom_profilefield_value_exists($user->{$key}, $fieldid)) {
+        if (custom_profilefield_value_exists($user->{$key}, $fieldid)) {
             $errors[] = get_string('error:customfieldexists', 'local_user_provisioning', (object)['field' => $key]);
         }
     }
@@ -186,11 +186,11 @@ function local_user_provisioning_custom_validate_before_create(object $user): ar
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_validate_before_update(object $user): array {
+function custom_validate_before_update(object $user): array {
     $errors = [];
-    $registry = local_user_provisioning_custom_field_registry();
+    $registry = custom_field_registry();
     $shortnames = array_column($registry, 'shortname');
-    $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
+    $profilefields = custom_get_profilefields_by_shortnames($shortnames);
 
     foreach ($registry as $key => $field) {
         if (!$field['unique'] || !isset($user->{$key})) {
@@ -209,7 +209,7 @@ function local_user_provisioning_custom_validate_before_update(object $user): ar
             continue;
         }
 
-        if (local_user_provisioning_custom_profilefield_value_exists($user->{$key}, $fieldid, $user->id)) {
+        if (custom_profilefield_value_exists($user->{$key}, $fieldid, $user->id)) {
             $errors[] = get_string('error:customfieldexists', 'local_user_provisioning', (object)['field' => $key]);
         }
     }
@@ -224,14 +224,14 @@ function local_user_provisioning_custom_validate_before_update(object $user): ar
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_persist_profile_fields(object $user): void {
+function custom_persist_profile_fields(object $user): void {
     global $CFG;
 
     require_once($CFG->dirroot . '/user/profile/lib.php');
 
-    $registry = local_user_provisioning_custom_field_registry();
+    $registry = custom_field_registry();
     $shortnames = array_column($registry, 'shortname');
-    $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
+    $profilefields = custom_get_profilefields_by_shortnames($shortnames);
 
     // Reindex by shortname for easier lookup.
     $profilefieldsbyshortname = array_column($profilefields, null, 'shortname');
@@ -265,12 +265,12 @@ function local_user_provisioning_custom_persist_profile_fields(object $user): vo
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_append_response_fields(object $user, array $returnvar): array {
+function custom_append_response_fields(object $user, array $returnvar): array {
     if (!isset($returnvar[scimresponse::SCIM2_CUSTOM_USER_URN]) || !is_array($returnvar[scimresponse::SCIM2_CUSTOM_USER_URN])) {
         $returnvar[scimresponse::SCIM2_CUSTOM_USER_URN] = [];
     }
 
-    foreach (local_user_provisioning_custom_field_registry() as $key => $field) {
+    foreach (custom_field_registry() as $key => $field) {
         $value = isset($user->{$key}) ? $user->{$key} : '';
         $returnvar[scimresponse::SCIM2_CUSTOM_USER_URN][$key] = $value;
     }

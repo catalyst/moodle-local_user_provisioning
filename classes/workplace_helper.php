@@ -75,7 +75,7 @@ class workplace_helper {
             if (!$sendscimerror) {
                 throw new \coding_exception('Tenant resolution failed.');
             }
-            local_user_provisioning_scim_error_msg(get_string('error:notenant', 'local_user_provisioning'), '');
+            scim_error_msg(get_string('error:notenant', 'local_user_provisioning'), '');
         }
 
         $this->tenant = $tenant;
@@ -175,7 +175,7 @@ class workplace_helper {
             if (!$sendscimerror) {
                 throw new \coding_exception('Position resolution failed.');
             }
-            local_user_provisioning_scim_error_msg(
+            scim_error_msg(
                 get_string(
                     'error:nopositionfound',
                     'local_user_provisioning',
@@ -192,7 +192,7 @@ class workplace_helper {
             if (!$sendscimerror) {
                 throw new \coding_exception('Department resolution failed.');
             }
-            local_user_provisioning_scim_error_msg(
+            scim_error_msg(
                 get_string(
                     'error:nodeptfound',
                     'local_user_provisioning',
@@ -261,7 +261,7 @@ class workplace_helper {
             if (!$sendscimerror) {
                 throw new \coding_exception('Framework configuration missing.');
             }
-            local_user_provisioning_scim_error_msg(
+            scim_error_msg(
                 get_string("error:no{$type}frameset", 'local_user_provisioning'),
                 'invalidValue',
                 400
@@ -273,7 +273,7 @@ class workplace_helper {
             if (!$sendscimerror) {
                 throw new \coding_exception('Organisation class missing.');
             }
-            local_user_provisioning_scim_error_msg(
+            scim_error_msg(
                 get_string("error:orgclass", 'local_user_provisioning', $class),
                 'invalidValue',
                 400
@@ -284,7 +284,7 @@ class workplace_helper {
             if (!$sendscimerror) {
                 throw new \coding_exception('Framework record missing.');
             }
-            local_user_provisioning_scim_error_msg(
+            scim_error_msg(
                 get_string("error:no{$type}frame", 'local_user_provisioning', $configframeid),
                 'invalidValue',
                 400

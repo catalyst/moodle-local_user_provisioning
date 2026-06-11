@@ -81,7 +81,7 @@ final class lib_test extends \advanced_testcase {
         $payload['meta'] = ['resourceType' => 'User'];
         $payload['groups'] = [['value' => 'group1']];
 
-        $user = local_user_provisioning_validate_data($payload, 'add', new stdClass());
+        $user = validate_data($payload, 'add', new stdClass());
 
         $this->assertFalse(property_exists($user, 'errors'));
     }
@@ -96,7 +96,7 @@ final class lib_test extends \advanced_testcase {
         $payload = $this->get_minimal_valid_payload();
         $payload['totallyUnknownField'] = 'x';
 
-        $user = local_user_provisioning_validate_data($payload, 'add', new stdClass());
+        $user = validate_data($payload, 'add', new stdClass());
 
         $this->assertTrue(property_exists($user, 'errors'));
         $errors = implode("\n", $user->errors);
@@ -113,7 +113,7 @@ final class lib_test extends \advanced_testcase {
         $payload = $this->get_minimal_valid_payload();
         $payload['schemas'] = ['urn:example:invalid'];
 
-        $user = local_user_provisioning_validate_data($payload, 'add', new stdClass());
+        $user = validate_data($payload, 'add', new stdClass());
 
         $this->assertTrue(property_exists($user, 'errors'));
         $errors = implode("\n", $user->errors);
@@ -150,7 +150,7 @@ final class lib_test extends \advanced_testcase {
             ],
         ];
 
-        $validated = local_user_provisioning_validate_datafields($payload, $user);
+        $validated = validate_datafields($payload, $user);
 
         $this->assertTrue(property_exists($validated, 'errors'));
         $errors = implode("\n", $validated->errors);
@@ -179,7 +179,7 @@ final class lib_test extends \advanced_testcase {
             ],
         ];
 
-        $validated = local_user_provisioning_validate_datafields($payload, $user);
+        $validated = validate_datafields($payload, $user);
 
         $this->assertTrue(property_exists($validated, 'errors'));
         $errors = implode("\n", $validated->errors);

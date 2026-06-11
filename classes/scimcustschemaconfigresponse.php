@@ -90,7 +90,7 @@ class scimcustschemaconfigresponse extends scimresponse {
             ],
         ];
 
-        foreach (local_user_provisioning_custom_field_registry_all() as $field) {
+        foreach (custom_field_registry_all() as $field) {
             $attributes[] = $field['schema'];
         }
 

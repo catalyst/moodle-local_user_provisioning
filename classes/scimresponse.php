@@ -99,7 +99,7 @@ abstract class scimresponse {
      * @return array
      */
     protected static function get_user_schemas(): array {
-        return local_user_provisioning_is_moodleworkplace() ? static::SCIM2_SCHEMAS_WORKPLACE : static::SCIM2_SCHEMAS_MOODLE;
+        return is_moodleworkplace() ? static::SCIM2_SCHEMAS_WORKPLACE : static::SCIM2_SCHEMAS_MOODLE;
     }
 
     /**

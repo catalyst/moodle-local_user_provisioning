@@ -32,7 +32,7 @@ defined('MOODLE_INTERNAL') || die();
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_is_moodleworkplace(): bool {
+function is_moodleworkplace(): bool {
     return class_exists('\\tool_tenant\\tenancy')
         && class_exists('\\tool_tenant\\tenant')
         && class_exists('\\tool_organisation\\position')

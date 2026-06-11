@@ -38,37 +38,37 @@ $router->setBasePath(SCIM2_BASE_URL);
 
 // Routes.
 // Generate Bearer token.
-$router->map('POST', '/v2/token', 'local_user_provisioning_token');
+$router->map('POST', '/v2/token', 'token');
 // SCIM Service Provider Configuration.
-$router->map('GET', '/v2/ServiceProviderConfig', 'local_user_provisioning_get_serviceproviderconfig');
+$router->map('GET', '/v2/ServiceProviderConfig', 'get_serviceproviderconfig');
 // SCIM Schema.
-$router->map('GET', '/v2/Schemas', 'local_user_provisioning_get_schemas');
+$router->map('GET', '/v2/Schemas', 'get_schemas');
 // User Schema.
-$router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_USER_URN, 'local_user_provisioning_get_userschema');
+$router->map('GET', '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_USER_URN, 'get_userschema');
 // Enterprise User Schema.
 $router->map(
     'GET',
     '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_ENTERPRISE_USER_EXT,
-    'local_user_provisioning_get_entuserschema'
+    'get_entuserschema'
 );
 // Custom Extention Schema - defines custom fields that are not part of SCIM v2.
 $router->map(
     'GET',
     '/v2/Schemas/' . scimserviceconfigresponse::SCIM2_CUSTOM_USER_URN,
-    'local_user_provisioning_get_custuserschema'
+    'get_custuserschema'
 );
 // Filter users.
-$router->map('GET', '/v2/Users', 'local_user_provisioning_get_users');
+$router->map('GET', '/v2/Users', 'get_users');
 // Get user details.
-$router->map('GET', '/v2/Users/[**:id]', 'local_user_provisioning_get_user');
+$router->map('GET', '/v2/Users/[**:id]', 'get_user');
 // Suspend user details.
-$router->map('DELETE', '/v2/Users/[**:id]', 'local_user_provisioning_suspend_user');
+$router->map('DELETE', '/v2/Users/[**:id]', 'suspend_user');
 // Provision / create user - POST Request.
-$router->map('POST', '/v2/Users', 'local_user_provisioning_create_user');
+$router->map('POST', '/v2/Users', 'create_user');
 // Update user - PUT Request.
-$router->map('PUT', '/v2/Users/[**:id]', 'local_user_provisioning_update_user');
+$router->map('PUT', '/v2/Users/[**:id]', 'update_user');
 // Update user set fields - PATCH Request.
-$router->map('PATCH', '/v2/Users/[**:id]', 'local_user_provisioning_update_userfields');
+$router->map('PATCH', '/v2/Users/[**:id]', 'update_userfields');
 
 /*
  * Match the route and decode the json. All target functions should accept json associative array as the
@@ -81,7 +81,7 @@ $target = __NAMESPACE__ . '\\' . $match['target'];
 // Check if there's route matched and the method can be called.
 if ($match && is_callable($target)) {
     // Validate the JSON body content and token if route anything other than `/v2/token`.
-    if ($target !== 'local_user_provisioning\local_user_provisioning_token') {
+    if ($target !== 'local_user_provisioning\token') {
         $body = file_get_contents('php://input');
         /*
         * If debugging is enabled send an email to the email specified in
@@ -107,7 +107,7 @@ if ($match && is_callable($target)) {
         if ($body) {
             $data = json_decode($body, true);
             if (json_last_error()) {
-                local_user_provisioning_scim_error_msg(
+                scim_error_msg(
                     json_last_error_msg(),
                     get_string('error:badrequest', 'local_user_provisioning'),
                     400
@@ -117,9 +117,9 @@ if ($match && is_callable($target)) {
             $data = [];
         }
         // Validate the Bearer token.
-        local_user_provisioning_validatetoken();
+        validatetoken();
     }
     call_user_func_array($target, array_merge([$data], array_values($match['params'])));
 } else {
-    local_user_provisioning_scim_error_msg(get_string('error:invaliduri', 'local_user_provisioning'), '?', 404);
+    scim_error_msg(get_string('error:invaliduri', 'local_user_provisioning'), '?', 404);
 }

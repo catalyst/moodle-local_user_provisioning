@@ -82,7 +82,7 @@ require_once($CFG->dirroot . '/local/user_provisioning/extensions/bootstrap.php'
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_scim_error_msg(string $message, string $type, int $responsecode = 500): void {
+function scim_error_msg(string $message, string $type, int $responsecode = 500): void {
     $resp = new scimerrorresponse($message, $type, $responsecode);
     $resp->send_response($responsecode);
     die; // Stop processing the request.
@@ -94,7 +94,7 @@ function local_user_provisioning_scim_error_msg(string $message, string $type, i
  * @return object OAuth2 server object
  * @package local_user_provisioning
  */
-function local_user_provisioning_server(): object {
+function server(): object {
     global $CFG;
 
     // Autoloading (composer is preferred, but for this example let's just do this).
@@ -122,11 +122,11 @@ function local_user_provisioning_server(): object {
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_token(): void {
+function token(): void {
 
     // Existing session (if any started) needs to be closed to generate a new token.
     \core\session\manager::write_close();
-    $server = local_user_provisioning_server();
+    $server = server();
     $server->handleTokenRequest(\OAuth2\Request::createFromGlobals())->send();
 }
 
@@ -136,12 +136,12 @@ function local_user_provisioning_token(): void {
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_validatetoken(): void {
+function validatetoken(): void {
 
     // Existing session (if any started) needs to be closed to validate the token.
     \core\session\manager::write_close();
 
-    $server = local_user_provisioning_server();
+    $server = server();
 
     if (!$server->verifyResourceRequest(\OAuth2\Request::createFromGlobals())) {
         $verificationerror = $server->getResponse();
@@ -151,7 +151,7 @@ function local_user_provisioning_validatetoken(): void {
         if (!isset($validationmessage)) {
             $validationmessage = get_string('error:unauthorized_help', 'local_user_provisioning');
         }
-        local_user_provisioning_scim_error_msg(
+        scim_error_msg(
             $validationmessage,
             get_string('error:unauthorized', 'local_user_provisioning'),
             401
@@ -165,7 +165,7 @@ function local_user_provisioning_validatetoken(): void {
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_schemas(): void {
+function get_schemas(): void {
 
     $resp = new scimschemaconfigresponse('Schemas');
     $resp->send_response(200);
@@ -177,10 +177,10 @@ function local_user_provisioning_get_schemas(): void {
  * @return JSON
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_entuserschema(): void {
+function get_entuserschema(): void {
 
-    if (!local_user_provisioning_is_moodleworkplace()) {
-        local_user_provisioning_scim_error_msg(
+    if (!is_moodleworkplace()) {
+        scim_error_msg(
             get_string('error:notfound', 'local_user_provisioning'),
             get_string('error:notfound', 'local_user_provisioning'),
             404
@@ -197,7 +197,7 @@ function local_user_provisioning_get_entuserschema(): void {
  * @return JSON
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_userschema(): void {
+function get_userschema(): void {
 
     $resp = new scimuserschemaconfigresponse('UserSchema');
     $resp->send_response(200);
@@ -209,7 +209,7 @@ function local_user_provisioning_get_userschema(): void {
  * @return JSON
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_custuserschema(): void {
+function get_custuserschema(): void {
 
     $resp = new scimcustschemaconfigresponse('UserCustomSchema');
     $resp->send_response(200);
@@ -221,7 +221,7 @@ function local_user_provisioning_get_custuserschema(): void {
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_serviceproviderconfig(): void {
+function get_serviceproviderconfig(): void {
 
     $resp = new scimserviceconfigresponse('ServiceConfig');
     $resp->send_response(200);
@@ -233,7 +233,7 @@ function local_user_provisioning_get_serviceproviderconfig(): void {
  * @return string Returns Authorization header.
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_authorizationheader(): string {
+function get_authorizationheader(): string {
 
     $headers = '';
     if (isset($_SERVER['Authorization'])) {
@@ -264,9 +264,9 @@ function local_user_provisioning_get_authorizationheader(): string {
  * @return null|string
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_bearertoken(): ?string {
+function get_bearertoken(): ?string {
 
-    $headers = local_user_provisioning_get_authorizationheader();
+    $headers = get_authorizationheader();
 
     // HEADER: Get the access token from the header.
     if (!empty($headers)) {
@@ -284,7 +284,7 @@ function local_user_provisioning_get_bearertoken(): ?string {
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_isactive(int $suspended): bool {
+function isactive(int $suspended): bool {
     if ($suspended == 1) {
         return false;
     } else {
@@ -333,13 +333,13 @@ function parse_truthy_value_to_int($value): ?int {
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_allowed_user_schema_urns(): array {
+function get_allowed_user_schema_urns(): array {
     $allowed = [
         scimresponse::SCIM2_USER_URN,
         scimresponse::SCIM2_CUSTOM_USER_URN,
     ];
 
-    if (local_user_provisioning_is_moodleworkplace()) {
+    if (is_moodleworkplace()) {
         $allowed[] = scimresponse::SCIM2_ENTERPRISE_USER_EXT;
     }
 
@@ -355,7 +355,7 @@ function local_user_provisioning_get_allowed_user_schema_urns(): array {
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_validate_schema_urns($schemas, array $allowedurns, array &$validationerror): void {
+function validate_schema_urns($schemas, array $allowedurns, array &$validationerror): void {
     if (!is_array($schemas)) {
         $validationerror[] = get_string('error:badrequest_help', 'local_user_provisioning')
             . ' Invalid schemas payload type.';
@@ -380,7 +380,7 @@ function local_user_provisioning_validate_schema_urns($schemas, array $allowedur
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_is_ignored_readonly_user_field(string $field): bool {
+function is_ignored_readonly_user_field(string $field): bool {
     return in_array($field, ['id', 'externalId', 'meta', 'groups'], true);
 }
 
@@ -399,7 +399,7 @@ function local_user_provisioning_is_ignored_readonly_user_field(string $field): 
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_is_ignored_readonly_patch_path(string $path): bool {
+function is_ignored_readonly_patch_path(string $path): bool {
     if (in_array($path, ['id', 'externalId', 'meta', 'groups', 'schemas'], true)) {
         return true;
     }
@@ -422,15 +422,15 @@ function local_user_provisioning_is_ignored_readonly_patch_path(string $path): b
  * @return string SQL Script.
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_userquerysql(bool $includeteam = true): string {
+function get_userquerysql(bool $includeteam = true): string {
     $fields = '';
     $join = '';
-    $workplace = local_user_provisioning_is_moodleworkplace();
+    $workplace = is_moodleworkplace();
     $workplacefields = '';
     $tenant = null;
 
     if ($workplace) {
-        $bearertoken = local_user_provisioning_get_bearertoken();
+        $bearertoken = get_bearertoken();
         if (!empty($bearertoken)) {
             $tenant = (new workplace_helper($bearertoken))->get_tenant();
         }
@@ -441,7 +441,7 @@ function local_user_provisioning_get_userquerysql(bool $includeteam = true): str
         $join .= ' LEFT JOIN {user_info_data} uid ON u.id = uid.userid AND fieldid = :fieldid';
     }
 
-    local_user_provisioning_custom_add_userquery_fields_and_joins($fields, $join);
+    custom_add_userquery_fields_and_joins($fields, $join);
 
     if ($workplace) {
         // Get only the most recent job and manager assignment as the API only supports 1 per user.
@@ -482,7 +482,7 @@ function local_user_provisioning_get_userquerysql(bool $includeteam = true): str
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_users(array $json, string $auth = 'oauthbearertoken'): void {
+function get_users(array $json, string $auth = 'oauthbearertoken'): void {
     global $DB;
 
     $extrasql = ' ';
@@ -547,7 +547,7 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
         }
 
         if ($invalidfilter) {
-            local_user_provisioning_scim_error_msg(
+            scim_error_msg(
                 get_string('error:invalifilter_help', 'local_user_provisioning'),
                 get_string('error:invalifilter', 'local_user_provisioning'),
                 400
@@ -555,12 +555,12 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
         }
     }
 
-    $sql = local_user_provisioning_get_userquerysql();
+    $sql = get_userquerysql();
     $sql .= $extrasql . " ORDER BY u.id";
 
     $records = $DB->get_records_sql($sql, $params);
     foreach ($records as $record) {
-        $resources[] = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), false);
+        $resources[] = new scimuserresponse($record, isactive($record->suspended), false);
     }
 
     $resp = new scimlistresponse($resources);
@@ -576,19 +576,19 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_user(array $json, string $idnumber, string $auth = 'oauthbearertoken'): void {
+function get_user(array $json, string $idnumber, string $auth = 'oauthbearertoken'): void {
     global $DB;
 
-    $sql = local_user_provisioning_get_userquerysql();
+    $sql = get_userquerysql();
     $sql .= " AND u.idnumber = :idnumber";
 
     $params['idnumber'] = $idnumber;
 
     if ($record = $DB->get_record_sql($sql, $params)) {
-        $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
+        $resp = new scimuserresponse($record, isactive($record->suspended), true);
         $resp->send_response(200);
     } else {
-        local_user_provisioning_scim_error_msg(
+        scim_error_msg(
             get_string('error:usernotfound', 'local_user_provisioning', $idnumber),
             get_string('error:notfound', 'local_user_provisioning'),
             404
@@ -603,7 +603,7 @@ function local_user_provisioning_get_user(array $json, string $idnumber, string 
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_validate_auth(string $auth = 'manual'): bool {
+function validate_auth(string $auth = 'manual'): bool {
     global $CFG;
 
     $supportedauths = array_values(array_filter(array_map('trim', explode(',', $CFG->auth))));
@@ -629,7 +629,7 @@ function local_user_provisioning_validate_auth(string $auth = 'manual'): bool {
  * @return string
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_default_auth(): string {
+function get_default_auth(): string {
     global $CFG;
 
     $supportedauths = array_values(array_filter(array_map('trim', explode(',', $CFG->auth))));
@@ -650,7 +650,7 @@ function local_user_provisioning_get_default_auth(): string {
  * @return object User details
  * @package local_user_provisioning
  */
-function local_user_provisioning_validate_data(
+function validate_data(
     array $json,
     string $action,
     object $user,
@@ -738,7 +738,7 @@ function local_user_provisioning_validate_data(
                             $user->city = $thisarray['locality'];
                         }
                         if (!empty($thisarray['country'])) {
-                            $user->country = local_user_provisioning_get_country_code($thisarray['country']);
+                            $user->country = get_country_code($thisarray['country']);
                         }
                     }
                 }
@@ -759,7 +759,7 @@ function local_user_provisioning_validate_data(
                 }
                 break;
             case 'title':
-                if (local_user_provisioning_is_moodleworkplace()) {
+                if (is_moodleworkplace()) {
                     $user->newposition = $value;
                     $user->jobassignmentrequested = true;
                 }
@@ -779,10 +779,10 @@ function local_user_provisioning_validate_data(
                         $user->institution = $value['organization'];
                     }
                     // Moodle Workplace: Manager details.
-                    if (local_user_provisioning_is_moodleworkplace() && isset($value['manager'])) {
+                    if (is_moodleworkplace() && isset($value['manager'])) {
                         $user->manageridnumber = $value['manager']['value'];
                         if (!empty($user->manageridnumber)) {
-                            $sql = local_user_provisioning_get_userquerysql();
+                            $sql = get_userquerysql();
                             $sql .= " AND u.suspended = :suspended
                                       AND u.deleted = :deleted
                                       AND u.idnumber = :idnumber";
@@ -806,15 +806,15 @@ function local_user_provisioning_validate_data(
                         // Only assign keys that are registered custom fields; unknown keys (including
                         // reserved Moodle user properties such as 'id', 'admin', 'auth', 'password')
                         // are silently ignored, preventing mass assignment via this extension block.
-                        local_user_provisioning_custom_map_inbound_field((string)$thiskey, $thisvalue, $user);
+                        custom_map_inbound_field((string)$thiskey, $thisvalue, $user);
                     }
                 }
                 break;
             case 'schemas':
                 // SCIM envelope field; validate schema URNs but do not map to Moodle profile data.
-                local_user_provisioning_validate_schema_urns(
+                validate_schema_urns(
                     $value,
-                    local_user_provisioning_get_allowed_user_schema_urns(),
+                    get_allowed_user_schema_urns(),
                     $validationerror
                 );
                 break;
@@ -825,8 +825,8 @@ function local_user_provisioning_validate_data(
                 // Ignore read-only SCIM fields for interoperability.
                 break;
             default:
-                if (!local_user_provisioning_custom_map_inbound_field($key, $value, $user)) {
-                    if (!local_user_provisioning_is_ignored_readonly_user_field($key)) {
+                if (!custom_map_inbound_field($key, $value, $user)) {
+                    if (!is_ignored_readonly_user_field($key)) {
                         $validationerror[] = get_string('error:badrequest_help', 'local_user_provisioning')
                             . ' Unsupported field in payload: ' . $key;
                     }
@@ -867,10 +867,9 @@ function local_user_provisioning_validate_data(
         $user->auth = 'saml2';
     }
 
-    if (!local_user_provisioning_validate_auth($user->auth)) {
+    if (!validate_auth($user->auth)) {
         $validationerror[] = get_string('error:invalidauth', 'local_user_provisioning');
     }
-
 
     if (count($validationerror)) {
         $user->errors = $validationerror;
@@ -886,7 +885,7 @@ function local_user_provisioning_validate_data(
  * @return string Country code / blank string if not found.
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_country_code(string $country): string {
+function get_country_code(string $country): string {
     $getcountryby = (strlen($country) == 2) ? 'code' : 'country';
     $countries = \get_string_manager()->get_list_of_countries(true);
     foreach ($countries as $key => $value) {
@@ -913,7 +912,7 @@ function local_user_provisioning_get_country_code(string $country): string {
  * @return string $content - Country name or Country code.
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_country(string $bywhat, string $content): string {
+function get_country(string $bywhat, string $content): string {
     $countries = \get_string_manager()->get_list_of_countries(true);
 
     foreach ($countries as $key => $value) {
@@ -939,7 +938,7 @@ function local_user_provisioning_get_country(string $bywhat, string $content): s
  * @return string $guid
  * @package local_user_provisioning
  */
-function local_user_provisioning_get_guid(): string {
+function get_guid(): string {
     global $DB;
 
     for ($attempt = 0; $attempt < 5; $attempt++) {
@@ -986,19 +985,19 @@ function local_user_provisioning_customfield(int $userid, int $fieldid, string|i
  * @param int $responsecode HTTP Response Code
  * @package local_user_provisioning
  */
-function local_user_provisioning_scimresponse(string $idnumber, int $responsecode, string $auth = 'oauthbearertoken'): void {
+function scimresponse(string $idnumber, int $responsecode, string $auth = 'oauthbearertoken'): void {
     global $DB;
 
-    $sql = local_user_provisioning_get_userquerysql();
+    $sql = get_userquerysql();
     $sql .= " AND u.idnumber = :idnumber";
     $params['idnumber'] = $idnumber;
 
     if ($record = $DB->get_record_sql($sql, $params)) {
-        $record->country = local_user_provisioning_get_country('code', $record->country);
-        $resp = new scimuserresponse($record, local_user_provisioning_isactive($record->suspended), true);
+        $record->country = get_country('code', $record->country);
+        $resp = new scimuserresponse($record, isactive($record->suspended), true);
         $resp->send_response($responsecode);
     } else {
-        local_user_provisioning_scim_error_msg(
+        scim_error_msg(
             get_string('error:usernotfound', 'local_user_provisioning', $idnumber),
             get_string('error:notfound', 'local_user_provisioning'),
             404
@@ -1014,31 +1013,31 @@ function local_user_provisioning_scimresponse(string $idnumber, int $responsecod
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_create_user(array $json, string $auth = 'oauthbearertoken'): void {
+function create_user(array $json, string $auth = 'oauthbearertoken'): void {
     global $CFG, $DB, $PAGE;
 
-    $validateuser = local_user_provisioning_validate_data($json, 'add', new stdClass(), $auth);
+    $validateuser = validate_data($json, 'add', new stdClass(), $auth);
 
     if (isset($validateuser->errors)) {
         $validationmessage = '';
         foreach ($validateuser->errors as $validationerror) {
             $validationmessage = $validationmessage . $validationerror . PHP_EOL;
         }
-        local_user_provisioning_scim_error_msg($validationmessage, 'invalidSyntax', 400);
+        scim_error_msg($validationmessage, 'invalidSyntax', 400);
     }
 
     if ($DB->get_record('user', ['username' => $validateuser->username])) {
-        local_user_provisioning_scim_error_msg(get_string('error:userexists', 'local_user_provisioning'), 'uniqueness', 409);
+        scim_error_msg(get_string('error:userexists', 'local_user_provisioning'), 'uniqueness', 409);
     }
 
-    $customvalidationerrors = local_user_provisioning_custom_validate_before_create($validateuser);
+    $customvalidationerrors = custom_validate_before_create($validateuser);
     if (!empty($customvalidationerrors)) {
-        local_user_provisioning_scim_error_msg(implode(PHP_EOL, $customvalidationerrors), 'uniqueness', 409);
+        scim_error_msg(implode(PHP_EOL, $customvalidationerrors), 'uniqueness', 409);
     }
 
-    // Default required fields.
+// Default required fields.
     if (empty($validateuser->idnumber)) {
-        $validateuser->idnumber = local_user_provisioning_get_guid();
+        $validateuser->idnumber = get_guid();
     }
     $validateuser->firstaccess = 0;
     $validateuser->mnethostid = 1;
@@ -1057,9 +1056,9 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
 
         $validateuser->id = $userid;
 
-        if (local_user_provisioning_is_moodleworkplace()) {
+        if (is_moodleworkplace()) {
             // Do the workplace updates.
-            $wphelper = new workplace_helper(local_user_provisioning_get_bearertoken());
+            $wphelper = new workplace_helper(get_bearertoken());
             $wphelper->update_user_tenant($userid, false);
             $wphelper->update_user_manager($userid, $validateuser->newmanagerid ?? null, false);
             if (!empty($validateuser->jobassignmentrequested)) {
@@ -1068,7 +1067,7 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         }
 
         // Persist custom profile fields after Workplace operations so that we have the user in the correct tenant.
-        local_user_provisioning_custom_persist_profile_fields($validateuser);
+        custom_persist_profile_fields($validateuser);
 
         if ($validateuser->auth === 'manual' || $validateuser->auth === 'email') {
             // PAGE context may not be set in a SCIM REST endpoint context, but is required
@@ -1083,7 +1082,7 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         $transaction->allow_commit();
 
         // Process SCIM Response.
-        local_user_provisioning_scimresponse($validateuser->idnumber, 201);
+        scimresponse($validateuser->idnumber, 201);
     } catch (\Throwable $e) {
         try {
             $transaction->rollback($e);
@@ -1095,14 +1094,14 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
 
         // A concurrent request may have inserted the same username between pre-check and write.
         if (!empty($validateuser->username) && $DB->record_exists('user', ['username' => $validateuser->username])) {
-            local_user_provisioning_scim_error_msg(
+            scim_error_msg(
                 get_string('error:userexists', 'local_user_provisioning'),
                 'uniqueness',
                 409
             );
         }
 
-        local_user_provisioning_scim_error_msg(
+        scim_error_msg(
             get_string('error:badrequest_help', 'local_user_provisioning'),
             'invalidValue',
             400
@@ -1119,24 +1118,24 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_update_user(array $json, string $idnumber, string $auth = 'oauthbearertoken'): void {
+function update_user(array $json, string $idnumber, string $auth = 'oauthbearertoken'): void {
     global $DB;
 
-    $sql = local_user_provisioning_get_userquerysql();
+    $sql = get_userquerysql();
     $sql .= " AND u.idnumber = :idnumber";
     $params = [];
     $params['idnumber'] = $idnumber;
 
     if (!$user = $DB->get_record_sql($sql, $params)) {
-        local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
+        scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
         return;
     }
 
     $oldusername = $user->username ?? '';
-    $validateduser = local_user_provisioning_validate_data($json, 'update', $user, $auth);
-    local_user_provisioning_apply_user_update($validateduser, $oldusername);
+    $validateduser = validate_data($json, 'update', $user, $auth);
+    apply_user_update($validateduser, $oldusername);
     // Process SCIM Response.
-    local_user_provisioning_scimresponse($validateduser->idnumber, 200);
+    scimresponse($validateduser->idnumber, 200);
 }
 
 /**
@@ -1148,13 +1147,13 @@ function local_user_provisioning_update_user(array $json, string $idnumber, stri
  * @return object User details
  * @package local_user_provisioning
  */
-function local_user_provisioning_validate_datafields(array $json, object $user, string $auth = 'oauthbearertoken'): object {
+function validate_datafields(array $json, object $user, string $auth = 'oauthbearertoken'): object {
     global $DB;
 
     $validationerror = [];
 
     if (array_key_exists('schemas', $json)) {
-        local_user_provisioning_validate_schema_urns(
+        validate_schema_urns(
             $json['schemas'],
             [SCIM2_PATCHOP_URN],
             $validationerror
@@ -1211,7 +1210,7 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         if (empty($user->auth)) {
                             $user->auth = 'saml2';
                         }
-                        if (!local_user_provisioning_validate_auth($user->auth)) {
+                        if (!validate_auth($user->auth)) {
                             $validationerror[] = get_string('error:invalidauth', 'local_user_provisioning');
                         }
                         break;
@@ -1256,7 +1255,7 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         if (empty($thisfieldvalue)) {
                             $user->country = '';
                         } else {
-                            $user->country = local_user_provisioning_get_country_code($thisfieldvalue);
+                            $user->country = get_country_code($thisfieldvalue);
                         }
                         break;
                     case 'active':
@@ -1266,18 +1265,18 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         }
                         break;
                     case 'title':
-                        if (local_user_provisioning_is_moodleworkplace()) {
+                        if (is_moodleworkplace()) {
                             $user->newposition = $thisfieldvalue;
                             $user->jobassignmentrequested = true;
                         }
                         break;
                     case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager':
-                        if (local_user_provisioning_is_moodleworkplace()) {
+                        if (is_moodleworkplace()) {
                             $user->manageridnumber = $thisfieldvalue;
                             if (empty($user->manageridnumber)) {
                                 $user->newmanagerid = 0;
                             } else {
-                                $sql = local_user_provisioning_get_userquerysql();
+                                $sql = get_userquerysql();
                                 $sql .= " AND u.suspended = :suspended
                                           AND u.deleted = :deleted
                                           AND u.idnumber = :idnumber";
@@ -1293,8 +1292,8 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         }
                         break;
                     default:
-                        if (!local_user_provisioning_custom_map_patch_field($thisfield, $thisfieldvalue, $user)) {
-                            if (!local_user_provisioning_is_ignored_readonly_patch_path($thisfield)) {
+                        if (!custom_map_patch_field($thisfield, $thisfieldvalue, $user)) {
+                            if (!is_ignored_readonly_patch_path($thisfield)) {
                                 $validationerror[] = get_string('error:badrequest_help', 'local_user_provisioning')
                                     . ' Unsupported PATCH path: ' . $thisfield;
                             }
@@ -1306,7 +1305,7 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
     }
 
     // Updating a user but there is no position update in the request, so keep it as it is.
-    if (local_user_provisioning_is_moodleworkplace() && !isset($user->newposition) && !empty($user->id)) {
+    if (is_moodleworkplace() && !isset($user->newposition) && !empty($user->id)) {
         $sql = "SELECT pos.name
                   FROM {tool_organisation_job} job
                   JOIN {tool_organisation_position} pos ON pos.id = job.positionid
@@ -1331,27 +1330,27 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_update_userfields(array $json, string $idnumber, string $auth = 'oauthbearertoken'): void {
+function update_userfields(array $json, string $idnumber, string $auth = 'oauthbearertoken'): void {
     global $DB;
 
-    $sql = local_user_provisioning_get_userquerysql();
+    $sql = get_userquerysql();
     $sql .= " AND u.idnumber = :idnumber";
     $params = [];
     $params['idnumber'] = $idnumber;
 
     if (!$user = $DB->get_record_sql($sql, $params)) {
-        local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
+        scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
         return;
     }
 
     // Validate JSON data.
     $oldusername = $user->username ?? '';
-    $validateuser = local_user_provisioning_validate_datafields($json, $user, $auth);
+    $validateuser = validate_datafields($json, $user, $auth);
 
-    local_user_provisioning_apply_user_update($validateuser, $oldusername);
+    apply_user_update($validateuser, $oldusername);
 
     // Process SCIM Response.
-    local_user_provisioning_scimresponse($validateuser->idnumber, 200);
+    scimresponse($validateuser->idnumber, 200);
 }
 
 /**
@@ -1361,7 +1360,7 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_apply_user_update(object $user, string $oldusername = ''): void {
+function apply_user_update(object $user, string $oldusername = ''): void {
     global $DB;
 
     if (isset($user->errors)) {
@@ -1369,7 +1368,7 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
         foreach ($user->errors as $validationerror) {
             $validationmessage .= $validationerror . PHP_EOL;
         }
-        local_user_provisioning_scim_error_msg($validationmessage, 'invalidSyntax', 400);
+        scim_error_msg($validationmessage, 'invalidSyntax', 400);
         return;
     }
 
@@ -1377,7 +1376,7 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
 
 
     if (!empty($user->username ?? '') && $usernamechanged && $DB->get_record('user', ['username' => $user->username])) {
-        local_user_provisioning_scim_error_msg(
+        scim_error_msg(
             get_string('error:userexists', 'local_user_provisioning'),
             'uniqueness',
             409
@@ -1385,9 +1384,9 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
         return;
     }
 
-    $customvalidationerrors = local_user_provisioning_custom_validate_before_update($user);
+    $customvalidationerrors = custom_validate_before_update($user);
     if (!empty($customvalidationerrors)) {
-        local_user_provisioning_scim_error_msg(implode(PHP_EOL, $customvalidationerrors), 'uniqueness', 409);
+        scim_error_msg(implode(PHP_EOL, $customvalidationerrors), 'uniqueness', 409);
         return;
     }
 
@@ -1397,11 +1396,11 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
         // Update user details.
         user_update_user($user, false);
 
-        local_user_provisioning_custom_persist_profile_fields($user);
+        custom_persist_profile_fields($user);
 
-        if (local_user_provisioning_is_moodleworkplace()) {
+        if (is_moodleworkplace()) {
             // Do the workplace updates.
-            $wphelper = new workplace_helper(local_user_provisioning_get_bearertoken());
+            $wphelper = new workplace_helper(get_bearertoken());
             // Newmanagerid will be set with a legitimate id if adding/updating or null if removing.
             if (isset($user->newmanagerid)) {
                 $wphelper->update_user_manager($user->id, $user->newmanagerid, false);
@@ -1427,14 +1426,14 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
             'username = :username AND id <> :id',
             ['username' => $user->username, 'id' => $user->id]
         )) {
-            local_user_provisioning_scim_error_msg(
+            scim_error_msg(
                 get_string('error:userexists', 'local_user_provisioning'),
                 'uniqueness',
                 409
             );
         }
 
-        local_user_provisioning_scim_error_msg(
+        scim_error_msg(
             get_string('error:badrequest_help', 'local_user_provisioning'),
             'invalidValue',
             400
@@ -1451,7 +1450,7 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_suspend_user(array $json, string $idnumber, string $auth = 'oauthbearertoken'): void {
+function suspend_user(array $json, string $idnumber, string $auth = 'oauthbearertoken'): void {
     global $DB;
 
     $sql = "SELECT u.id
@@ -1459,9 +1458,9 @@ function local_user_provisioning_suspend_user(array $json, string $idnumber, str
              WHERE idnumber = :idnumber";
     $params['idnumber'] = $idnumber;
 
-    if (local_user_provisioning_is_moodleworkplace()) {
+    if (is_moodleworkplace()) {
         // Workplace tenant filtering.
-        $tenant = (new workplace_helper(local_user_provisioning_get_bearertoken()))->get_tenant();
+        $tenant = (new workplace_helper(get_bearertoken()))->get_tenant();
         $sql .= ' AND ' . \tool_tenant\tenancy::get_users_subquery(true, false, 'u.id', (int)$tenant->get('id'));
     }
 
@@ -1469,12 +1468,12 @@ function local_user_provisioning_suspend_user(array $json, string $idnumber, str
         $userrecord = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
         $userrecord->suspended = 1;
         user_update_user($userrecord, false);
-        local_user_provisioning_scim_error_msg(
+        scim_error_msg(
             get_string('nocontent_help', 'local_user_provisioning', $idnumber),
             get_string('nocontent', 'local_user_provisioning'),
             204
         );
     } else {
-        local_user_provisioning_scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
+        scim_error_msg(get_string('error:usernotfound', 'local_user_provisioning', $idnumber), '?', 404);
     }
 }

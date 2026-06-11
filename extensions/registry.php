@@ -36,15 +36,15 @@ require_once(__DIR__ . '/workplace.php');
  * @return int|null
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_current_tenantid(): ?int {
-    if (!local_user_provisioning_is_moodleworkplace()) {
+function custom_current_tenantid(): ?int {
+    if (!is_moodleworkplace()) {
         return null;
     }
 
     $bearertoken = null;
 
-    if (function_exists('\\local_user_provisioning\\local_user_provisioning_get_bearertoken')) {
-        $bearertoken = \local_user_provisioning\local_user_provisioning_get_bearertoken();
+    if (function_exists('\\local_user_provisioning\\get_bearertoken')) {
+        $bearertoken = \local_user_provisioning\get_bearertoken();
     }
 
     if (empty($bearertoken)) {
@@ -56,7 +56,7 @@ function local_user_provisioning_custom_current_tenantid(): ?int {
         return (int)$tenant->get('id');
     } catch (\Throwable $e) {
         debugging(
-            'Tenant resolution failed in local_user_provisioning_custom_current_tenantid(): ' . $e->getMessage(),
+            'Tenant resolution failed in custom_current_tenantid(): ' . $e->getMessage(),
             DEBUG_DEVELOPER
         );
         return null;
@@ -70,11 +70,11 @@ function local_user_provisioning_custom_current_tenantid(): ?int {
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_field_registry_for_tenant(int $tenantid): array {
+function custom_field_registry_for_tenant(int $tenantid): array {
     $configkey = "tenant_{$tenantid}_custom_fields";
     $configtext = (string)get_config('local_user_provisioning', $configkey);
 
-    return local_user_provisioning_custom_field_registry_from_config($configtext);
+    return custom_field_registry_from_config($configtext);
 }
 
 /**
@@ -88,7 +88,7 @@ function local_user_provisioning_custom_field_registry_for_tenant(int $tenantid)
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_merge_registries(array $base, array $additional): array {
+function custom_merge_registries(array $base, array $additional): array {
     foreach ($additional as $key => $field) {
         if (!array_key_exists($key, $base)) {
             $base[$key] = $field;
@@ -117,7 +117,7 @@ function local_user_provisioning_custom_merge_registries(array $base, array $add
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_field_registry_from_config(string $configtext): array {
+function custom_field_registry_from_config(string $configtext): array {
     $fields = [];
     $lines = preg_split('/\r\n|\r|\n/', $configtext);
 
@@ -169,21 +169,21 @@ function local_user_provisioning_custom_field_registry_from_config(string $confi
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_field_registry(?int $tenantid = null): array {
+function custom_field_registry(?int $tenantid = null): array {
     $globalconfigtext = (string)get_config('local_user_provisioning', 'custom_fields');
     $globalconfigtext .= "\r\nauth|Auth\r\n";
-    $globalregistry = local_user_provisioning_custom_field_registry_from_config($globalconfigtext);
+    $globalregistry = custom_field_registry_from_config($globalconfigtext);
 
     if (is_null($tenantid)) {
-        $tenantid = local_user_provisioning_custom_current_tenantid();
+        $tenantid = custom_current_tenantid();
     }
 
     if (is_null($tenantid)) {
         return $globalregistry;
     }
 
-    $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
-    return local_user_provisioning_custom_merge_registries($globalregistry, $tenantregistry);
+    $tenantregistry = custom_field_registry_for_tenant($tenantid);
+    return custom_merge_registries($globalregistry, $tenantregistry);
 }
 
 /**
@@ -194,19 +194,19 @@ function local_user_provisioning_custom_field_registry(?int $tenantid = null): a
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_field_registry_all(): array {
+function custom_field_registry_all(): array {
     $globalconfigtext = (string)get_config('local_user_provisioning', 'custom_fields');
-    $mergedregistry = local_user_provisioning_custom_field_registry_from_config($globalconfigtext);
+    $mergedregistry = custom_field_registry_from_config($globalconfigtext);
 
-    if (!local_user_provisioning_is_moodleworkplace()) {
+    if (!is_moodleworkplace()) {
         return $mergedregistry;
     }
 
-    $tenantid = local_user_provisioning_custom_current_tenantid();
+    $tenantid = custom_current_tenantid();
 
     if (!is_null($tenantid)) {
-        $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
-        $mergedregistry = local_user_provisioning_custom_merge_registries($mergedregistry, $tenantregistry);
+        $tenantregistry = custom_field_registry_for_tenant($tenantid);
+        $mergedregistry = custom_merge_registries($mergedregistry, $tenantregistry);
     }
 
     return $mergedregistry;
@@ -220,23 +220,23 @@ function local_user_provisioning_custom_field_registry_all(): array {
  * @return array<string, array<int, string>>
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_duplicate_field_keys(): array {
+function custom_duplicate_field_keys(): array {
     $seen = [];
 
     $globalconfigtext = (string)get_config('local_user_provisioning', 'custom_fields');
-    $globalregistry = local_user_provisioning_custom_field_registry_from_config($globalconfigtext);
+    $globalregistry = custom_field_registry_from_config($globalconfigtext);
     foreach (array_keys($globalregistry) as $key) {
         $seen[$key] = ['global'];
     }
 
-    if (\local_user_provisioning\local_user_provisioning_is_moodleworkplace()) {
+    if (\local_user_provisioning\is_moodleworkplace()) {
         $tenants = \tool_tenant\tenant::get_records(['archived' => 0]);
         foreach ($tenants as $tenant) {
             $tenantid = (int)$tenant->get('id');
             $tenantname = trim((string)$tenant->get('name'));
             $source = $tenantname === '' ? 'tenant ' . $tenantid : $tenantname;
 
-            $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
+            $tenantregistry = custom_field_registry_for_tenant($tenantid);
             foreach (array_keys($tenantregistry) as $key) {
                 if (!array_key_exists($key, $seen)) {
                     $seen[$key] = [$source];

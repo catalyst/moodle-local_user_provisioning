@@ -30,7 +30,7 @@ if ($hassiteconfig) {
     $ADMIN->add(
         'localplugins',
         new admin_category(
-            'local_user_provisioning_settings',
+            'settings',
             new lang_string('pluginname', 'local_user_provisioning')
         )
     );
@@ -54,7 +54,7 @@ if ($hassiteconfig) {
         ));
 
         $settingspage->add(new admin_setting_heading(
-            'local_user_provisioning_docs',
+            'docs',
             'SCIM API Documentation',
             html_writer::link(
                 new moodle_url('/local/user_provisioning/docs/scim.php'),
@@ -71,10 +71,10 @@ if ($hassiteconfig) {
             80,
             12
         );
-        $customfieldssetting->set_updatedcallback('\\local_user_provisioning\\local_user_provisioning_custom_fields_updated');
+        $customfieldssetting->set_updatedcallback('\\local_user_provisioning\\custom_fields_updated');
         $settingspage->add($customfieldssetting);
 
-        if (\local_user_provisioning\local_user_provisioning_is_moodleworkplace()) {
+        if (\local_user_provisioning\is_moodleworkplace()) {
             $tenants = \tool_tenant\tenant::get_records(['archived' => 0]);
 
             foreach ($tenants as $tenant) {
@@ -97,7 +97,7 @@ if ($hassiteconfig) {
                     8
                 );
                 $tenantcustomfieldssetting->set_updatedcallback(
-                    '\\local_user_provisioning\\local_user_provisioning_custom_fields_updated'
+                    '\\local_user_provisioning\\custom_fields_updated'
                 );
                 $settingspage->add($tenantcustomfieldssetting);
 

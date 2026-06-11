@@ -52,7 +52,7 @@ class scimschemaconfigresponse extends scimresponse {
             scimcustschemaconfigresponse::get_extra_data(),
         ];
 
-        if (local_user_provisioning_is_moodleworkplace()) {
+        if (is_moodleworkplace()) {
             array_splice($resources, 1, 0, [scimentschemaconfigresponse::get_extra_data()]);
         }
 

@@ -28,7 +28,7 @@
  * @param int $oldversion
  * @return bool
  */
-function xmldb_local_user_provisioning_upgrade($oldversion): bool {
+function xmldb_upgrade($oldversion): bool {
     global $CFG, $DB;
 
     if ($oldversion < 2026052800) {
@@ -44,14 +44,14 @@ function xmldb_local_user_provisioning_upgrade($oldversion): bool {
 
             $newentry = 'team|' . $label;
 
-            if (\local_user_provisioning\local_user_provisioning_is_moodleworkplace()) {
+            if (\local_user_provisioning\is_moodleworkplace()) {
                 $tenants = \tool_tenant\tenant::get_records(['archived' => 0]);
 
                 foreach ($tenants as $tenant) {
                     $tenantid = (int)$tenant->get('id');
                     $configkey = "tenant_{$tenantid}_custom_fields";
                     $configtext = (string)get_config('local_user_provisioning', $configkey);
-                    $registry = \local_user_provisioning\local_user_provisioning_custom_field_registry_from_config($configtext);
+                    $registry = \local_user_provisioning\custom_field_registry_from_config($configtext);
 
                     if (array_key_exists('team', $registry)) {
                         continue;
@@ -68,7 +68,7 @@ function xmldb_local_user_provisioning_upgrade($oldversion): bool {
                 }
             } else {
                 $configtext = (string)get_config('local_user_provisioning', 'custom_fields');
-                $registry = \local_user_provisioning\local_user_provisioning_custom_field_registry_from_config($configtext);
+                $registry = \local_user_provisioning\custom_field_registry_from_config($configtext);
 
                 if (!array_key_exists('team', $registry)) {
                     $newconfigtext = trim($configtext);

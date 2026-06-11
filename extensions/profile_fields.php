@@ -44,7 +44,7 @@ if (!defined('USERPROFILEFIELDCATEGORYTENANTPREFIX')) {
  * @return string
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_tenant_category_name(string $tenantname): string {
+function custom_tenant_category_name(string $tenantname): string {
     $tenantname = trim($tenantname);
     if ($tenantname === '') {
         $tenantname = 'Tenant';
@@ -61,7 +61,7 @@ function local_user_provisioning_custom_tenant_category_name(string $tenantname)
  * @return int
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_get_or_create_categoryid(string $categoryname, ?int $tenantid = null): int {
+function custom_get_or_create_categoryid(string $categoryname, ?int $tenantid = null): int {
     global $CFG, $DB;
 
     require_once($CFG->dirroot . '/user/profile/definelib.php');
@@ -96,7 +96,7 @@ function local_user_provisioning_custom_get_or_create_categoryid(string $categor
  * @return int|null
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_get_profilefieldid(
+function custom_get_profilefieldid(
     string $shortname
 ): ?int {
     global $DB;
@@ -115,7 +115,7 @@ function local_user_provisioning_custom_get_profilefieldid(
  * @return array
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_get_profilefields_by_shortnames(array $shortnames): array {
+function custom_get_profilefields_by_shortnames(array $shortnames): array {
     global $DB;
 
     $shortnames = array_values(array_unique(array_filter(array_map('strval', $shortnames), static function(string $name): bool {
@@ -141,7 +141,7 @@ function local_user_provisioning_custom_get_profilefields_by_shortnames(array $s
  * @return int|null
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_create_profilefieldid(
+function custom_create_profilefieldid(
     string $shortname,
     ?string $name = null,
     int $forceunique = 0,
@@ -154,7 +154,7 @@ function local_user_provisioning_custom_create_profilefieldid(
     require_once($CFG->dirroot . '/user/profile/definelib.php');
     require_once($CFG->dirroot . '/user/profile/lib.php');
 
-    if ($fieldid = local_user_provisioning_custom_get_profilefieldid($shortname)) {
+    if ($fieldid = custom_get_profilefieldid($shortname)) {
         return (int)$fieldid;
     }
 
@@ -162,7 +162,7 @@ function local_user_provisioning_custom_create_profilefieldid(
         $categoryname = USERPROFILEFIELDCATEGORY;
     }
 
-    $categoryid = local_user_provisioning_custom_get_or_create_categoryid($categoryname, $tenantid);
+    $categoryid = custom_get_or_create_categoryid($categoryname, $tenantid);
 
     $fieldrecord = new stdClass();
     $fieldrecord->id = 0;
@@ -196,14 +196,14 @@ function local_user_provisioning_custom_create_profilefieldid(
  * @return void
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
+function custom_ensure_profile_fields_exist(): void {
     // Get the global field registry - fields that apply to all tenants.
-    $globalregistry = local_user_provisioning_custom_field_registry();
+    $globalregistry = custom_field_registry();
 
     // Start with an empty tenants array.
     $tenants = [];
     // Only fetch tenants if we're running Moodle Workplace.
-    if (\local_user_provisioning\local_user_provisioning_is_moodleworkplace()) {
+    if (\local_user_provisioning\is_moodleworkplace()) {
         // Get all active (non-archived) tenants.
         $tenants = \tool_tenant\tenant::get_records(['archived' => 0]);
     }
@@ -219,7 +219,7 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
     foreach ($tenants as $tenant) {
         $tenantid = (int)$tenant->get('id');
         // Get fields specific to this tenant.
-        $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
+        $tenantregistry = custom_field_registry_for_tenant($tenantid);
         // Add each tenant field shortname to the master list.
         foreach ($tenantregistry as $field) {
             $allshortnames[] = $field['shortname'];
@@ -227,7 +227,7 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
     }
 
     // Do a single DB lookup for all shortnames at once (global + all tenants).
-    $existingfields = local_user_provisioning_custom_get_profilefields_by_shortnames($allshortnames);
+    $existingfields = custom_get_profilefields_by_shortnames($allshortnames);
 
     // Loop through global fields and create any that don't already exist.
     foreach ($globalregistry as $field) {
@@ -237,7 +237,7 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
         }
 
         // Field doesn't exist so create it under the global profile field category.
-        local_user_provisioning_custom_create_profilefieldid(
+        custom_create_profilefieldid(
             $field['shortname'],
             $field['name'],
             (int)$field['unique'],
@@ -254,16 +254,16 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
     foreach ($tenants as $tenant) {
         $tenantid = (int)$tenant->get('id');
         // Get fields specific to this tenant.
-        $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
+        $tenantregistry = custom_field_registry_for_tenant($tenantid);
         // If this tenant has no specific fields, skip it.
         if (empty($tenantregistry)) {
             continue;
         }
 
         // Get or build the category name for this tenant.
-        $tenantcategory = local_user_provisioning_custom_tenant_category_name((string)$tenant->get('name'));
+        $tenantcategory = custom_tenant_category_name((string)$tenant->get('name'));
         // Ensure the tenant category exists in the DB, creating it if not.
-        local_user_provisioning_custom_get_or_create_categoryid($tenantcategory, $tenantid);
+        custom_get_or_create_categoryid($tenantcategory, $tenantid);
 
         // Loop through tenant fields and create any that don't already exist.
         foreach ($tenantregistry as $field) {
@@ -273,7 +273,7 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
             }
 
             // Field doesn't exist so create it under the tenant's category.
-            local_user_provisioning_custom_create_profilefieldid(
+            custom_create_profilefieldid(
                 $field['shortname'],
                 $field['name'],
                 (int)$field['unique'],
@@ -300,7 +300,7 @@ function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_profilefield_value_exists(
+function custom_profilefield_value_exists(
     string $value,
     int $fieldid,
     ?int $excludeuserid = null

@@ -73,7 +73,7 @@ class scimuserschemaconfigresponse extends scimresponse {
      * @return array
      */
     public static function get_userattributes(): array {
-        $isworkplace = local_user_provisioning_is_moodleworkplace();
+        $isworkplace = is_moodleworkplace();
 
         $coreattributes = [
             [
