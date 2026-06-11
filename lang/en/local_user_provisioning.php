@@ -51,6 +51,8 @@ $string['grant_types'] = 'Grant Types';
 $string['httpbasic'] = 'HTTP Basic';
 $string['httpbasic_desc'] = 'Authentication scheme using the HTTP Basic Standard';
 $string['insert_error'] = 'Error occurred creating client';
+$string['nocontent'] = 'nocontent';
+$string['nocontent_help'] = 'No content';
 $string['oauth2bearer'] = 'OAuth Bearer Token';
 $string['oauth2bearer_desc'] = 'Authentication scheme using the OAuth Bearer Token Standard 2.0';
 $string['pluginname'] = 'SCIM User Provisioning';
@@ -66,8 +68,8 @@ $string['user_id'] = 'User ID';
 
 
 
-// SCIM attribute descriptions...
-// Core user fields
+// SCIM attribute descriptions.
+// Core user fields.
 $string['attr-active'] = "User profile - Suspended account (inverted: active=true means not suspended).";
 $string['attr-auth'] = "User profile - Authentication method.";
 $string['attr-department'] = "User profile - Department.";
@@ -76,76 +78,73 @@ $string['attr-organization'] = "User profile - Institution.";
 $string['attr-preferredlanguage'] = "User preference - Preferred language (e.g., 'en_US').";
 $string['attr-username'] = "User profile - Username. Must be unique.";
 
-// Name component
+// Name component.
 $string['attr-name'] = "SCIM name component.";
 $string['attr-name-familyname'] = "User profile - Last name.";
 $string['attr-name-givenname'] = "User profile - First name.";
 $string['attr-name-middlename'] = "User profile - Middle name.";
 
-// Email component
+// Email component.
 $string['attr-emails'] = "SCIM emails component.";
+$string['attr-emails-primary'] = "Only the primary email address is mapped to Moodle.";
 $string['attr-emails-type'] = "Label indicating function (e.g., 'work' or 'home').";
 $string['attr-emails-value'] = "User profile - Email address.";
-$string['attr-emails-primary'] = "Only the primary email address is mapped to Moodle.";
 
-// Address component
+// Address component.
 $string['attr-addresses'] = "SCIM addresses component.";
-$string['attr-addresses-type'] = "Label indicating function (e.g., 'work' or 'home').";
-$string['attr-addresses-streetaddress'] = "User profile - Address.";
-$string['attr-addresses-locality'] = "User profile - City/town.";
 $string['attr-addresses-country'] = "User profile - Country.";
+$string['attr-addresses-locality'] = "User profile - City/town.";
+$string['attr-addresses-streetaddress'] = "User profile - Address.";
+$string['attr-addresses-type'] = "Label indicating function (e.g., 'work' or 'home').";
 
-// Phone component
+// Phone component.
 $string['attr-phonenumbers'] = "SCIM phone numbers component.";
 $string['attr-phonenumbers-type'] = "Label indicating type (e.g., 'work' or 'mobile').";
 $string['attr-phonenumbers-value'] = "Work maps to User profile - Phone, mobile maps to User profile - Mobile phone.";
 
-// Workplace only
-$string['attr-title'] = "Workplace only: Job assignment - Position.";
+// Workplace only.
 $string['attr-manager'] = "SCIM resource URI referencing the user's manager.";
 $string['attr-manager-value'] = "Workplace only: populates job assignment manager. Manager's Moodle idnumber.";
+$string['attr-title'] = "Workplace only: Job assignment - Position.";
 
-// Moodle Workplace...
-$string['tenant'] = 'Tenant: {$a}';
-$string['tenant_desc'] = 'You must configure a position and department framework here to be able to use the API for that tenant.';
+// Moodle Workplace.
 $string['departmentframework'] = 'Department framework';
 $string['departmentframework_help'] = 'This will be the department framework used to add new department that are for user that are created as part of user provisioning';
 $string['nodepartmentframework'] = 'Please add framework to tenant "{$a}" to configure this';
+$string['nopositionframework'] = 'Please add framework to tenant "{$a}" to configure this';
 $string['positionframework'] = 'Position framework';
 $string['positionframework_help'] = 'This will be the position framework used to add new positions that are for user that are created as part of user provisioning';
-$string['nopositionframework'] = 'Please add framework to tenant "{$a}" to configure this';
+$string['tenant'] = 'Tenant: {$a}';
+$string['tenant_desc'] = 'You must configure a position and department framework here to be able to use the API for that tenant.';
 
-// Error...
+// Error.
 $string['error:badrequest'] = 'Bad Request'; // Error code 400.
 $string['error:badrequest_help'] = 'Request is unparsable, syntactically incorrect, or violates schema.';
-$string['error:unauthorized'] = 'Unauthorized'; // Error code 401.
-$string['error:unauthorized_help'] = 'Authorization failure. The authorization header is invalid or missing.';
-$string['error:forbidden'] = 'Forbidden'; // Error code 403.
-$string['error:forbidden_help'] = 'Operation is not permitted based on the supplied authorization.';
-$string['error:notfound'] = 'Not Found'; // Error code 404.
-$string['error:notfound_help'] = 'Specified resource or endpoint does not exist.';
-$string['error:userexists'] = 'User already exists.';
-$string['error:invaliduri'] = 'Invalid request uri.';
-$string['error:invalifilter'] = 'invalidFilter';
-$string['error:invalifilter_help'] = 'The specified filter syntax was invalid or the specified attribute and filter comparison combination is not supported.';
-$string['error:usernotfound'] = 'User {$a} not found';
-$string['nocontent'] = 'nocontent';
-$string['nocontent_help'] = 'No content';
-$string['error:missingusername'] = 'userName is missing in the request body';
-$string['error:missingfirstname'] = 'name.givenName is missing in the request body';
-$string['error:missinglastname'] = 'name.familyName is missing in the request body';
-$string['error:missingemail'] = 'emails.value is missing in the request body';
-$string['error:pernrexists'] = 'pernr already exists.';
 $string['error:customfieldexists'] = '{$a->field} already exists.';
 $string['error:customfieldnotunique'] = '{$a->field} must be set to Unique in the Moodle profile field configuration.';
-$string['warning:duplicatecustomfieldkeys'] = 'Duplicate custom field keys detected across global and tenant settings: {$a}. Separate tenant profile fields cannot be created for these keys without prefixes.';
+$string['error:forbidden'] = 'Forbidden'; // Error code 403.
+$string['error:forbidden_help'] = 'Operation is not permitted based on the supplied authorization.';
 $string['error:invalidauth'] = 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User auth not supported';
+$string['error:invalifilter'] = 'invalidFilter';
+$string['error:invalifilter_help'] = 'The specified filter syntax was invalid or the specified attribute and filter comparison combination is not supported.';
 $string['error:invalidmanager'] = 'Manager set for this user is invalid';
-$string['error:nopositionframeset'] = 'Job assignment failed: no position framework set in site config. Please raise with Moodle site admin';
-$string['error:nodepartmentframeset'] = 'Job assignment failed: no department framework set in site config. Please raise with Moodle site admin';
-$string['error:nopositionframe'] = 'Job assignment failed: no position framework found with id: {$a}';
-$string['error:nopositionfound'] = 'Job assignment failed: no position found in framework id: {$a->frameid} with name: {$a->name}';
+$string['error:invaliduri'] = 'Invalid request uri.';
+$string['error:missingemail'] = 'emails.value is missing in the request body';
+$string['error:missingfirstname'] = 'name.givenName is missing in the request body';
+$string['error:missinglastname'] = 'name.familyName is missing in the request body';
+$string['error:missingusername'] = 'userName is missing in the request body';
 $string['error:nodepartmentframe'] = 'Job assignment failed: no department framework found with id: {$a}';
+$string['error:nodepartmentframeset'] = 'Job assignment failed: no department framework set in site config. Please raise with Moodle site admin';
 $string['error:nodeptfound'] = 'Job assignment failed: no department found in framework id: {$a->frameid} with idnumber: {$a->idnumber}';
+$string['error:nopositionfound'] = 'Job assignment failed: no position found in framework id: {$a->frameid} with name: {$a->name}';
+$string['error:nopositionframe'] = 'Job assignment failed: no position framework found with id: {$a}';
+$string['error:nopositionframeset'] = 'Job assignment failed: no position framework set in site config. Please raise with Moodle site admin';
 $string['error:notenant'] = 'No tenant found linked to this bearer token';
+$string['error:notfound'] = 'Not Found'; // Error code 404.
+$string['error:notfound_help'] = 'Specified resource or endpoint does not exist.';
 $string['error:orgclass'] = 'No organisation class found for {$a}';
+$string['error:unauthorized'] = 'Unauthorized'; // Error code 401.
+$string['error:unauthorized_help'] = 'Authorization failure. The authorization header is invalid or missing.';
+$string['error:userexists'] = 'User already exists.';
+$string['error:usernotfound'] = 'User {$a} not found';
+$string['warning:duplicatecustomfieldkeys'] = 'Duplicate custom field keys detected across global and tenant settings: {$a}. Separate tenant profile fields cannot be created for these keys without prefixes.';

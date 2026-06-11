@@ -25,6 +25,7 @@
 namespace local_user_provisioning;
 
 use stdClass;
+use tool_tenant\profile_manager;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -56,22 +57,36 @@ function local_user_provisioning_custom_tenant_category_name(string $tenantname)
  * Resolve or create a user profile field category by name.
  *
  * @param string $categoryname
+ * @param int|null $tenantid
  * @return int
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_get_or_create_categoryid(string $categoryname): int {
-    global $DB;
+function local_user_provisioning_custom_get_or_create_categoryid(string $categoryname, ?int $tenantid = null): int {
+    global $CFG, $DB;
+
+    require_once($CFG->dirroot . '/user/profile/definelib.php');
 
     if ($categoryid = $DB->get_field('user_info_category', 'id', ['name' => $categoryname])) {
         return (int)$categoryid;
     }
 
-    $catsortorder = (int)$DB->get_field_sql('SELECT COALESCE(MAX(sortorder), 0) FROM {user_info_category}', []) + 1;
     $categoryrecord = new stdClass();
+    $categoryrecord->id = 0;
     $categoryrecord->name = $categoryname;
-    $categoryrecord->sortorder = $catsortorder;
+    profile_save_category($categoryrecord);
 
-    return (int)$DB->insert_record('user_info_category', $categoryrecord);
+    // If we have a tenant ID, make sure the profile fields are only available for that tenant.
+    if ($tenantid) {
+        $categoryavailable = new stdClass();
+        $categoryavailable->id = $categoryrecord->id;
+        $categoryavailable->name = $categoryrecord->name;
+        $categoryavailable->availability = 'only';
+        $categoryavailable->onlytenants = [];
+        $categoryavailable->onlytenants[] = $tenantid;
+        profile_manager::save_category_config($categoryavailable);
+    }
+
+    return (int)$categoryrecord->id;
 }
 
 /**
@@ -81,7 +96,7 @@ function local_user_provisioning_custom_get_or_create_categoryid(string $categor
  * @return int|null
  * @package local_user_provisioning
  */
-function local_user_provisioning_custom_get_or_create_profilefieldid(
+function local_user_provisioning_custom_get_profilefieldid(
     string $shortname
 ): ?int {
     global $DB;
@@ -116,26 +131,13 @@ function local_user_provisioning_custom_get_profilefields_by_shortnames(array $s
 }
 
 /**
- * Check if a profile field is configured as unique in Moodle UI.
- *
- * @param int $fieldid
- * @return bool
- * @package local_user_provisioning
- */
-function local_user_provisioning_custom_profilefield_is_unique(int $fieldid): bool {
-    global $DB;
-
-    $forceunique = $DB->get_field('user_info_field', 'forceunique', ['id' => $fieldid], IGNORE_MISSING);
-    return !empty($forceunique);
-}
-
-/**
  * Create profile field by shortname if missing.
  *
  * @param string $shortname
  * @param string|null $name
  * @param int $forceunique
  * @param string $datatype
+ * @param int|null $tenantid
  * @return int|null
  * @package local_user_provisioning
  */
@@ -144,11 +146,15 @@ function local_user_provisioning_custom_create_profilefieldid(
     ?string $name = null,
     int $forceunique = 0,
     string $datatype = 'text',
-    ?string $categoryname = null
+    ?string $categoryname = null,
+    ?int $tenantid = null
 ): ?int {
-    global $DB;
+    global $CFG;
 
-    if ($fieldid = local_user_provisioning_custom_get_or_create_profilefieldid($shortname)) {
+    require_once($CFG->dirroot . '/user/profile/definelib.php');
+    require_once($CFG->dirroot . '/user/profile/lib.php');
+
+    if ($fieldid = local_user_provisioning_custom_get_profilefieldid($shortname)) {
         return (int)$fieldid;
     }
 
@@ -156,26 +162,32 @@ function local_user_provisioning_custom_create_profilefieldid(
         $categoryname = USERPROFILEFIELDCATEGORY;
     }
 
-    $categoryid = local_user_provisioning_custom_get_or_create_categoryid($categoryname);
-
-    $fieldsortorder = (int)$DB->get_field_sql(
-        'SELECT COALESCE(MAX(sortorder), 0) FROM {user_info_field} WHERE categoryid = :categoryid',
-        ['categoryid' => $categoryid]
-    ) + 1;
+    $categoryid = local_user_provisioning_custom_get_or_create_categoryid($categoryname, $tenantid);
 
     $fieldrecord = new stdClass();
+    $fieldrecord->id = 0;
     $fieldrecord->shortname = $shortname;
     $fieldrecord->name = $name ?? strtoupper($shortname);
     $fieldrecord->datatype = $datatype;
     $fieldrecord->categoryid = $categoryid;
-    $fieldrecord->sortorder = $fieldsortorder;
     $fieldrecord->required = 0;
     $fieldrecord->locked = 0;
-    $fieldrecord->visible = 0;
+    $fieldrecord->visible = PROFILE_VISIBLE_NONE;
     $fieldrecord->forceunique = $forceunique;
     $fieldrecord->signup = 0;
+    $fieldrecord->description = ['text' => '', 'format' => FORMAT_HTML];
+    $fieldrecord->defaultdata = '';
 
-    return (int)$DB->insert_record('user_info_field', $fieldrecord);
+    if ($datatype === 'text') {
+        $fieldrecord->param1 = 30;
+        $fieldrecord->param2 = 2048;
+        $fieldrecord->param3 = 0;
+        $fieldrecord->param4 = '';
+        $fieldrecord->param5 = '';
+    }
+
+    profile_save_field($fieldrecord, []);
+    return (int)$fieldrecord->id;
 }
 
 /**
@@ -185,108 +197,106 @@ function local_user_provisioning_custom_create_profilefieldid(
  * @package local_user_provisioning
  */
 function local_user_provisioning_custom_ensure_profile_fields_exist(): void {
+    // Get the global field registry - fields that apply to all tenants.
     $globalregistry = local_user_provisioning_custom_field_registry();
 
+    // Start with an empty tenants array.
     $tenants = [];
+    // Only fetch tenants if we're running Moodle Workplace.
     if (\local_user_provisioning\local_user_provisioning_is_moodleworkplace()) {
+        // Get all active (non-archived) tenants.
         $tenants = \tool_tenant\tenant::get_records(['archived' => 0]);
     }
 
+    // If there are no tenants, there's nothing to do so exit early.
+    if (empty($tenants)) {
+        return;
+    }
+
+    // Start the shortnames list with all global field shortnames.
     $allshortnames = array_column($globalregistry, 'shortname');
+    // Loop through each tenant to also collect their specific field shortnames.
     foreach ($tenants as $tenant) {
         $tenantid = (int)$tenant->get('id');
+        // Get fields specific to this tenant.
         $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
+        // Add each tenant field shortname to the master list.
         foreach ($tenantregistry as $field) {
             $allshortnames[] = $field['shortname'];
         }
     }
 
+    // Do a single DB lookup for all shortnames at once (global + all tenants).
     $existingfields = local_user_provisioning_custom_get_profilefields_by_shortnames($allshortnames);
 
+    // Loop through global fields and create any that don't already exist.
     foreach ($globalregistry as $field) {
-        if (!empty($existingfields[$field['shortname']])) {
+        // If this field already exists in the DB, skip it.
+        if (!empty($existingfields[$field['shortname']]) || $field['shortname'] === 'auth') {
             continue;
         }
 
+        // Field doesn't exist so create it under the global profile field category.
         local_user_provisioning_custom_create_profilefieldid(
             $field['shortname'],
             $field['name'],
             (int)$field['unique'],
             'text',
-            USERPROFILEFIELDCATEGORY
+            USERPROFILEFIELDCATEGORY,
+            $tenantid
         );
 
+        // Add to existing fields so we don't try to create it again later.
         $existingfields[$field['shortname']] = (object)['shortname' => $field['shortname']];
     }
 
-    if (empty($tenants)) {
-        return;
-    }
-
+    // Now loop through tenants again to create any missing tenant-specific fields.
     foreach ($tenants as $tenant) {
         $tenantid = (int)$tenant->get('id');
+        // Get fields specific to this tenant.
         $tenantregistry = local_user_provisioning_custom_field_registry_for_tenant($tenantid);
+        // If this tenant has no specific fields, skip it.
         if (empty($tenantregistry)) {
             continue;
         }
 
+        // Get or build the category name for this tenant.
         $tenantcategory = local_user_provisioning_custom_tenant_category_name((string)$tenant->get('name'));
-        local_user_provisioning_custom_get_or_create_categoryid($tenantcategory);
+        // Ensure the tenant category exists in the DB, creating it if not.
+        local_user_provisioning_custom_get_or_create_categoryid($tenantcategory, $tenantid);
 
+        // Loop through tenant fields and create any that don't already exist.
         foreach ($tenantregistry as $field) {
+            // If this field already exists in the DB, skip it.
             if (!empty($existingfields[$field['shortname']])) {
                 continue;
             }
 
+            // Field doesn't exist so create it under the tenant's category.
             local_user_provisioning_custom_create_profilefieldid(
                 $field['shortname'],
                 $field['name'],
                 (int)$field['unique'],
                 'text',
-                $tenantcategory
+                $tenantcategory,
+                $tenantid
             );
 
+            // Add to existing fields so we don't try to create it again later.
             $existingfields[$field['shortname']] = (object)['shortname' => $field['shortname']];
         }
     }
 }
 
 /**
- * Set profile field value.
- *
- * @param int $userid
- * @param int $fieldid
- * @param string|null $value
- * @return void
- * @package local_user_provisioning
- */
-function local_user_provisioning_custom_set_profilefield_value(int $userid, int $fieldid, ?string $value): void {
-    global $DB;
-
-    if (is_null($value)) {
-        $value = '';
-    }
-
-    if ($record = $DB->get_record('user_info_data', ['userid' => $userid, 'fieldid' => $fieldid])) {
-        $DB->set_field('user_info_data', 'data', $value, ['userid' => $userid, 'fieldid' => $fieldid]);
-    } else {
-        if ($value === '') {
-            return;
-        }
-        $thisrecord = new stdClass();
-        $thisrecord->userid = $userid;
-        $thisrecord->fieldid = $fieldid;
-        $thisrecord->data = $value;
-        $DB->insert_record('user_info_data', $thisrecord);
-    }
-}
-
-/**
  * Check if profile field value already exists.
+ *
+ * Used for uniqueness validation where a custom profile field has been
+ * mark as only accepting unique values.
  *
  * @param string $value
  * @param int $fieldid
- * @param int|null $excludeuserid
+ * @param int|null $excludeuserid Prevents false positives on updates where the same user already has that value.
  * @return bool
  * @package local_user_provisioning
  */

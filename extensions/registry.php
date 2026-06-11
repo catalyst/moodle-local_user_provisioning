@@ -37,7 +37,7 @@ require_once(__DIR__ . '/workplace.php');
  * @package local_user_provisioning
  */
 function local_user_provisioning_custom_current_tenantid(): ?int {
-    if (!local_user_provisioning_custom_is_moodleworkplace()) {
+    if (!local_user_provisioning_is_moodleworkplace()) {
         return null;
     }
 
@@ -171,6 +171,7 @@ function local_user_provisioning_custom_field_registry_from_config(string $confi
  */
 function local_user_provisioning_custom_field_registry(?int $tenantid = null): array {
     $globalconfigtext = (string)get_config('local_user_provisioning', 'custom_fields');
+    $globalconfigtext .= "\r\nauth|Auth\r\n";
     $globalregistry = local_user_provisioning_custom_field_registry_from_config($globalconfigtext);
 
     if (is_null($tenantid)) {
@@ -197,7 +198,7 @@ function local_user_provisioning_custom_field_registry_all(): array {
     $globalconfigtext = (string)get_config('local_user_provisioning', 'custom_fields');
     $mergedregistry = local_user_provisioning_custom_field_registry_from_config($globalconfigtext);
 
-    if (!local_user_provisioning_custom_is_moodleworkplace()) {
+    if (!local_user_provisioning_is_moodleworkplace()) {
         return $mergedregistry;
     }
 

@@ -33,15 +33,11 @@ defined('MOODLE_INTERNAL') || die();
  * @package local_user_provisioning
  */
 function local_user_provisioning_is_moodleworkplace(): bool {
-    return class_exists('\\tool_tenant\\tenancy') && class_exists('\\local_user_provisioning\\workplace_helper');
+    return class_exists('\\tool_tenant\\tenancy')
+        && class_exists('\\tool_tenant\\tenant')
+        && class_exists('\\tool_organisation\\position')
+        && class_exists('\\tool_organisation\\department')
+        && class_exists('\\tool_organisation\\job_manager')
+        && class_exists('\\local_user_provisioning\\workplace_helper');
 }
 
-/**
- * Backward-compatible alias used by extension helpers.
- *
- * @return bool
- * @package local_user_provisioning
- */
-function local_user_provisioning_custom_is_moodleworkplace(): bool {
-    return local_user_provisioning_is_moodleworkplace();
-}

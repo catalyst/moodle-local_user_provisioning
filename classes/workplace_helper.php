@@ -98,7 +98,7 @@ class workplace_helper {
      * MWP supports more than 1 manager, but we are going to limit this over the API to 1 manager per user.
      *
      * If the managerid argument is null then remove all managers.
-     * If the managerid argument is not null then remove all existing managers and add exactly one.
+     * If the managerid argument is not null then keep exactly one assignment for that manager.
      *
      * @param int $userid
      * @param int|null $managerid
@@ -120,6 +120,12 @@ class workplace_helper {
             order: 'id DESC'
         );
 
+        // If the user already has exactly this manager assigned, nothing to do.
+        if ($managerid && count($usermanagerrecords) === 1
+                && $usermanagerrecords[0]->get('managerid') === $managerid) {
+            return;
+        }
+
         // The API exposes per-manager delete only; manager count is intentionally bounded to small sets here.
         // Always clear existing assignments first so we end up with zero or one manager only.
         foreach ($usermanagerrecords as $usermanagerrecord) {
@@ -139,10 +145,10 @@ class workplace_helper {
     }
 
     /**
-     * Assigns a job to user.
+     * Assigns a tenant-scoped job to a user.
      * The position must exist in the configured framework and is matched on name.
-     * The department given will be the one matching the tenant it belongs to by idnumber,
-     * in the framework defined in the plugin settings.
+     * The department is derived from the tenant idnumber and matched in the configured
+     * department framework.
      *
      * @param int $userid User id.
      * @param string $posname of the position to match on and assign.

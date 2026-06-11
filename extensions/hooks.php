@@ -225,22 +225,36 @@ function local_user_provisioning_custom_validate_before_update(object $user): ar
  * @package local_user_provisioning
  */
 function local_user_provisioning_custom_persist_profile_fields(object $user): void {
+    global $CFG;
+
+    require_once($CFG->dirroot . '/user/profile/lib.php');
+
     $registry = local_user_provisioning_custom_field_registry();
     $shortnames = array_column($registry, 'shortname');
     $profilefields = local_user_provisioning_custom_get_profilefields_by_shortnames($shortnames);
 
+    // Reindex by shortname for easier lookup.
+    $profilefieldsbyshortname = array_column($profilefields, null, 'shortname');
+
     foreach ($registry as $key => $field) {
-        if (!isset($user->{$key})) {
+        $shortname = $field['shortname'];
+
+        // Skip if the user object doesn't have this field.
+        if (!isset($user->{$shortname})) {
             continue;
         }
 
-        if (empty($profilefields[$field['shortname']])) {
+        // Skip if the profile field doesn't exist in the DB.
+        if (empty($profilefieldsbyshortname[$shortname])) {
             continue;
         }
 
-        $fieldid = (int)$profilefields[$field['shortname']]->id;
-        local_user_provisioning_custom_set_profilefield_value($user->id, $fieldid, $user->{$key});
+        // Add prefixed version with the value and remove the unprefixed one.
+        $user->{'profile_field_' . $shortname} = $user->{$shortname};
+        unset($user->{$shortname});
     }
+
+    profile_save_data($user);
 }
 
 /**

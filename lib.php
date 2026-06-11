@@ -301,7 +301,7 @@ function local_user_provisioning_isactive(int $suspended): bool {
  * @return int|null
  * @package local_user_provisioning
  */
-function local_user_provisioning_parse_active_value($value): ?int {
+function parse_truthy_value_to_int($value): ?int {
     if (is_bool($value)) {
         return $value ? 1 : 0;
     }
@@ -373,6 +373,9 @@ function local_user_provisioning_validate_schema_urns($schemas, array $allowedur
 /**
  * True when the top-level SCIM field is a known envelope/read-only field.
  *
+ * Silently ignoring these fields improves interoperability. Some SCIM
+ * clients automatically include them in requests and shouldn't get errors back.
+ *
  * @param string $field
  * @return bool
  * @package local_user_provisioning
@@ -383,6 +386,14 @@ function local_user_provisioning_is_ignored_readonly_user_field(string $field): 
 
 /**
  * True when the SCIM PATCH path is a known envelope/read-only path.
+ *
+ *  Silently ignoring these fields improves interoperability. Some SCIM
+ *  clients automatically include them in requests and shouldn't get errors back.
+ *
+ *  Handles three cases:
+ *  - Exact read-only field names (id, externalId, meta, groups, schemas)
+ *  - Meta sub-paths (e.g. meta.created, meta.lastModified)
+ *  - Group paths with optional SCIM filter syntax (e.g. groups[value eq "abc"].display)
  *
  * @param string $path
  * @return bool
@@ -592,7 +603,7 @@ function local_user_provisioning_get_user(array $json, string $idnumber, string 
  * @return bool
  * @package local_user_provisioning
  */
-function local_user_provisioning_validate_auth(string $auth): bool {
+function local_user_provisioning_validate_auth(string $auth = 'manual'): bool {
     global $CFG;
 
     $supportedauths = array_values(array_filter(array_map('trim', explode(',', $CFG->auth))));
@@ -603,7 +614,11 @@ function local_user_provisioning_validate_auth(string $auth): bool {
         return true;
     }
 
-    return in_array($auth, $supportedauths, true);
+    if (!in_array($auth, $supportedauths, true)) {
+        return false;
+    }
+
+    return true;
 }
 
 /**
@@ -619,15 +634,11 @@ function local_user_provisioning_get_default_auth(): string {
 
     $supportedauths = array_values(array_filter(array_map('trim', explode(',', $CFG->auth))));
 
-    if (in_array('saml2', $supportedauths, true)) {
-        return 'saml2';
+    if (!in_array($auth, $supportedauths, true)) {
+        return false;
     }
 
-    if (in_array('manual', $supportedauths, true)) {
-        return 'manual';
-    }
-
-    return $supportedauths[0] ?? '';
+    return true;
 }
 
 /**
@@ -754,7 +765,7 @@ function local_user_provisioning_validate_data(
                 }
                 break;
             case 'active':
-                $active = local_user_provisioning_parse_active_value($value);
+                $active = parse_truthy_value_to_int($value);
                 if (!is_null($active)) {
                     $user->suspended = ($active === 1) ? 0 : 1;
                 }
@@ -773,8 +784,10 @@ function local_user_provisioning_validate_data(
                         if (!empty($user->manageridnumber)) {
                             $sql = local_user_provisioning_get_userquerysql();
                             $sql .= " AND u.suspended = :suspended
+                                      AND u.deleted = :deleted
                                       AND u.idnumber = :idnumber";
                             $params['suspended'] = 0;
+                            $params['deleted'] = 0;
                             $params['idnumber'] = $user->manageridnumber;
                             if ($record = $DB->get_record_sql($sql, $params)) {
                                 $user->newmanagerid = $record->id;
@@ -822,8 +835,9 @@ function local_user_provisioning_validate_data(
         }
     }
 
-    // Updating a user and there is no position update in the request so keep it as it is.
-    if (local_user_provisioning_is_moodleworkplace() && !isset($user->newposition) && !empty($user->id)) {
+    // Update a user: No position attribute in the request, keep it as it is.
+    // Position included in the request, update (empty value to remove).
+    if (is_moodleworkplace() && !isset($user->newposition) && !empty($user->id)) {
         $sql = "SELECT pos.name
                   FROM {tool_organisation_job} job
                   JOIN {tool_organisation_position} pos ON pos.id = job.positionid
@@ -848,14 +862,15 @@ function local_user_provisioning_validate_data(
         $validationerror[] = get_string('error:missingemail', 'local_user_provisioning');
     }
 
-    // Default authentication only when not provided in payload.
+    // Default to saml2 if not provided, as portal organisations are expected to use saml2.
     if (empty($user->auth)) {
-        $user->auth = local_user_provisioning_get_default_auth();
+        $user->auth = 'saml2';
     }
 
-    if (empty($user->auth) || !local_user_provisioning_validate_auth($user->auth)) {
+    if (!local_user_provisioning_validate_auth($user->auth)) {
         $validationerror[] = get_string('error:invalidauth', 'local_user_provisioning');
     }
+
 
     if (count($validationerror)) {
         $user->errors = $validationerror;
@@ -1042,9 +1057,6 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
 
         $validateuser->id = $userid;
 
-        // Persist custom profile fields before any optional Workplace operations.
-        local_user_provisioning_custom_persist_profile_fields($validateuser);
-
         if (local_user_provisioning_is_moodleworkplace()) {
             // Do the workplace updates.
             $wphelper = new workplace_helper(local_user_provisioning_get_bearertoken());
@@ -1055,7 +1067,12 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
             }
         }
 
+        // Persist custom profile fields after Workplace operations so that we have the user in the correct tenant.
+        local_user_provisioning_custom_persist_profile_fields($validateuser);
+
         if ($validateuser->auth === 'manual' || $validateuser->auth === 'email') {
+            // PAGE context may not be set in a SCIM REST endpoint context, but is required
+            // by setnew_password_and_mail() to generate email content and links.
             if (empty($PAGE->context)) {
                 $PAGE->set_context(\context_system::instance());
             }
@@ -1073,6 +1090,8 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         } catch (\Throwable $ignored) {
             // Rollback already handled by delegated transaction manager.
         }
+
+        debugging('SCIM create_user failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
 
         // A concurrent request may have inserted the same username between pre-check and write.
         if (!empty($validateuser->username) && $DB->record_exists('user', ['username' => $validateuser->username])) {
@@ -1183,13 +1202,15 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         $user->department = $thisfieldvalue;
                         break;
                     case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization':
-                        $user->institution = $thisfieldvalue;
-                        break;
                     case 'organization':
                         $user->institution = $thisfieldvalue;
                         break;
                     case 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User:auth':
                         $user->auth = $thisfieldvalue;
+                        // Default to SAML2 if not provided.
+                        if (empty($user->auth)) {
+                            $user->auth = 'saml2';
+                        }
                         if (!local_user_provisioning_validate_auth($user->auth)) {
                             $validationerror[] = get_string('error:invalidauth', 'local_user_provisioning');
                         }
@@ -1222,8 +1243,6 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         $user->phone1 = $thisfieldvalue;
                         break;
                     case 'phoneNumbers[type eq "mobile"].value':
-                        $user->phone2 = $thisfieldvalue;
-                        break;
                     case 'phoneNumbers[type eq "mobile phone"].value':
                         $user->phone2 = $thisfieldvalue;
                         break;
@@ -1241,7 +1260,7 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                         }
                         break;
                     case 'active':
-                        $active = local_user_provisioning_parse_active_value($thisfieldvalue);
+                        $active = parse_truthy_value_to_int($thisfieldvalue);
                         if (!is_null($active)) {
                             $user->suspended = ($active === 1) ? 0 : 1;
                         }
@@ -1260,8 +1279,10 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                             } else {
                                 $sql = local_user_provisioning_get_userquerysql();
                                 $sql .= " AND u.suspended = :suspended
+                                          AND u.deleted = :deleted
                                           AND u.idnumber = :idnumber";
                                 $params['suspended'] = 0;
+                                $params['deleted'] = 0;
                                 $params['idnumber'] = $user->manageridnumber;
                                 if ($record = $DB->get_record_sql($sql, $params)) {
                                     $user->newmanagerid = $record->id;
@@ -1397,6 +1418,8 @@ function local_user_provisioning_apply_user_update(object $user, string $olduser
         } catch (\Throwable $ignored) {
             // Rollback already handled by delegated transaction manager.
         }
+
+        debugging('SCIM apply_user_update failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
 
         // A concurrent request may claim the username between pre-check and write.
         if (!empty($user->username) && $DB->record_exists_select(
