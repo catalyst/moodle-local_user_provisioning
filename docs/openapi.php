@@ -344,6 +344,29 @@ paths:
           description: Successful response
 
   /Users:
+    get:
+      tags:
+        - Users
+      summary: Search users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            SCIM filter expression. Supported fields: userName, name.familyName, name.givenName, emails.
+            Supported operators:
+            - eq (equal) e.g. userName eq "joeb@job.com"
+            - neq (not equal) e.g. userName neq "joeb@job.com"
+            - co (contains) e.g. userName co "joeb@job.com"
+            - sw (starts with) e.g. userName sw "joeb@job.com"
+            - ew (ends with) e.g. userName ew "joeb@job.com"
+      responses:
+        '200':
+          description: Successful response
     post:
       tags:
         - Users
@@ -399,6 +422,23 @@ paths:
           description: User created
 
   /Users/{idnumber}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: idnumber
+          in: path
+          required: true
+          schema:
+            type: string
+          description: SCIM user identifier mapped to Moodle user.idnumber
+      responses:
+        '200':
+          description: Successful response
+
     patch:
       tags:
         - Users
