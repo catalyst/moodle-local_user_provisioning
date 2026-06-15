@@ -86,8 +86,7 @@ class scimentschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "The User's manager. A complex type that optionally allows service providers to represent
-                    organizational hierarchy by referencing the 'id' attribute of another User. Job assignments - Manager",
+                "description" => "Workplace only: Job assignments - Manager. References 'idnumber' attribute of another User.",
                 "subAttributes" => [
                     [
                         "name" => "value",
@@ -104,6 +103,17 @@ class scimentschemaconfigresponse extends scimresponse {
                         "description" => "The URI of the SCIM resource representing the User's manager.",
                     ],
                 ],
+            ],
+            [
+                "name" => "department",
+                "type" => "string",
+                "multiValued" => false,
+                "required" => false,
+                "caseExact" => false,
+                "mutability" => "readWrite",
+                "returned" => "default",
+                "uniqueness" => "none",
+                "description" => "Workplace only: Job assignment - Department.",
             ],
         ];
     }

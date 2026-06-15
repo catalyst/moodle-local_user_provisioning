@@ -154,7 +154,7 @@ class workplace_helper {
      * @param string $posname of the position to match on and assign.
      * @return void
      */
-    public function assign_job(int $userid, string $posname = '', bool $sendscimerror = true): void {
+    public function assign_job(int $userid, string $posname = '', bool $sendscimerror = true, string $deptname = '',): void {
 
         $currenttime = time();
         $tenantid = $this->get_tenant($sendscimerror)->get('id');
@@ -186,9 +186,23 @@ class workplace_helper {
             );
         }
 
-        // Find the department in the framework that matches the tenant idnumber.
-        $tenant = tenant::get_record(['id' => $tenantid], MUST_EXIST);
-        if (!$dept = \tool_organisation\department::get_record(['idnumber' => $tenant->get('idnumber')])) {
+        // If deptname provided, look up by name like positions.
+        if (!empty($deptname)) {
+            $departments = \tool_organisation\department::get_records(
+                ['name' => $deptname, 'parentid' => $deptframeid],
+                order: 'id DESC'
+            );
+            $dept = reset($departments);
+        } else {
+            // Fall back to existing behaviour (tenant idnumber match),
+            // or if only one dept exists, use that.
+            $tenant = tenant::get_record(['id' => $tenantid], MUST_EXIST);
+            $dept = \tool_organisation\department::get_record(
+                ['idnumber' => $tenant->get('idnumber')]
+            );
+        }
+
+        if (!$dept) {
             if (!$sendscimerror) {
                 throw new \coding_exception('Department resolution failed.');
             }
@@ -196,7 +210,7 @@ class workplace_helper {
                 get_string(
                     'error:nodeptfound',
                     'local_user_provisioning',
-                    ['frameid' => $deptframeid, 'idnumber' => $tenant->get('idnumber')]
+                    ['frameid' => $deptframeid, 'idnumber' => $deptname]
                 ),
                 'invalidValue',
                 400

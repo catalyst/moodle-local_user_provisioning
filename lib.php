@@ -771,9 +771,9 @@ function validate_data(
                 }
                 break;
             case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User':
-                if (is_array($value)) {
+                if (is_moodleworkplace() && is_array($value)) {
                     if (isset($value['department'])) {
-                        $user->department = $value['department'];
+                        $user->newdepartment = $value['department'];
                     }
                     if (isset($value['organization'])) {
                         $user->institution = $value['organization'];
@@ -1062,7 +1062,7 @@ function create_user(array $json, string $auth = 'oauthbearertoken'): void {
             $wphelper->update_user_tenant($userid, false);
             $wphelper->update_user_manager($userid, $validateuser->newmanagerid ?? null, false);
             if (!empty($validateuser->jobassignmentrequested)) {
-                $wphelper->assign_job($userid, $validateuser->newposition ?? '', false);
+                $wphelper->assign_job($userid, $validateuser->newposition ?? '', false, $validateuser->newdepartment);
             }
         }
 
@@ -1406,7 +1406,7 @@ function apply_user_update(object $user, string $oldusername = ''): void {
                 $wphelper->update_user_manager($user->id, $user->newmanagerid, false);
             }
             if (!empty($user->jobassignmentrequested)) {
-                $wphelper->assign_job($user->id, $user->newposition ?? '', false);
+                $wphelper->assign_job($user->id, $user->newposition ?? '', false, $user->newdepartment);
             }
         }
 

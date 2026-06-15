@@ -131,12 +131,14 @@ class scimuserresponse extends scimresponse {
 
         if ($isworkplace) {
             $returnvar['title'] = $this->user->title;
+            $dept = \tool_organisation\department::get_record(['id' => $this->user->departmentid]);
             $returnvar[static::SCIM2_ENTERPRISE_USER_EXT] = [
                 'manager' => [
                     'value' => $manageridnumber,
                     '$ref' => $refurl,
                     'displayName' => $manager,
                 ],
+                'department' => $dept->get('name'),
             ];
         }
 
