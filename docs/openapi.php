@@ -125,6 +125,7 @@ function openapi_userbase_yaml(bool $isworkplace): string {
       'preferredLanguage' => 'Maps to Moodle user.lang. Language-country values are normalized to language code ' .
         'and may resolve to *_wp locale when available (for example en-GB -> en or en_wp).',
       'department' => 'Moodle user profile department text field.',
+      'division' => 'Moodle Workplace Job department text field.',
       'organization' => 'Moodle user profile institution field.',
     ];
 
@@ -236,6 +237,7 @@ $enterpriseschemaurn = $isworkplace
 $enterpriseexampleblock = $isworkplace
   ? "              urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:\n"
     . "                department: Supply Division\n"
+    . "                division: Supply Division\n"
     . "                manager:\n"
     . "                  value: ''\n"
   : '';
@@ -246,7 +248,7 @@ if ($isworkplace) {
       . "    - title is treated as a job position name (not a salutation such as Mr/Mrs/Miss).\n"
     . "    - there is no separate job object in request payload; job assignment is derived from mapped fields.\n"
     . "    - title maps to position and is used to create/update the user's Workplace job assignment.\n"
-      . "    - department (enterprise) maps to the Workplace job assignment department.\n"
+    . "    - division (enterprise) maps to the Workplace job assignment department.\n"
     . "    - when title is provided, job-assignment prerequisites must be resolvable "
     . "(frameworks, position, department) or the API returns 400 invalidValue.\n"
     . "    - create requests are handled transactionally across user/profile/workplace DB writes; "
@@ -410,7 +412,6 @@ paths:
                   type: work
                   primary: true
               active: true
-              department: Supply Division
 {$titlefield}
 {$enterpriseexampleblock}              urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User:
                 auth: saml2

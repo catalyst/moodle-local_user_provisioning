@@ -176,17 +176,6 @@ class scimuserschemaconfigresponse extends scimresponse {
                 "description" => get_string('attr-active', 'local_user_provisioning'),
             ],
             [
-                "name" => "department",
-                "type" => "string",
-                "multiValued" => false,
-                "required" => false,
-                "caseExact" => false,
-                "mutability" => "readWrite",
-                "returned" => "default",
-                "uniqueness" => "none",
-                "description" => get_string('attr-department', 'local_user_provisioning'),
-            ],
-            [
                 "name" => "organization",
                 "type" => "string",
                 "multiValued" => false,

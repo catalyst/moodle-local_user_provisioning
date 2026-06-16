@@ -121,7 +121,6 @@ class scimuserresponse extends scimresponse {
                                     'primary' => true,
                                 ],
                             ],
-            'department' => $this->user->department,
             'active' => $this->active,
             static::SCIM2_CUSTOM_USER_URN => [
                                                 'auth' => $this->user->auth ?? null,
@@ -131,14 +130,15 @@ class scimuserresponse extends scimresponse {
 
         if ($isworkplace) {
             $returnvar['title'] = $this->user->title;
-            $dept = \tool_organisation\department::get_record(['id' => $this->user->departmentid]);
+            $orgdept = \tool_organisation\department::get_record(['id' => $this->user->departmentid]);
             $returnvar[static::SCIM2_ENTERPRISE_USER_EXT] = [
                 'manager' => [
                     'value' => $manageridnumber,
                     '$ref' => $refurl,
                     'displayName' => $manager,
                 ],
-                'department' => $dept->get('name'),
+                'department' => $this->user->department,
+                'division' => $orgdept ? $orgdept->get('name') : '',
             ];
         }
 

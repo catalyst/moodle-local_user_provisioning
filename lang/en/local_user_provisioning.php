@@ -103,6 +103,7 @@ $string['attr-phonenumbers-type'] = "Label indicating type (e.g., 'work' or 'mob
 $string['attr-phonenumbers-value'] = "Work maps to User profile - Phone, mobile maps to User profile - Mobile phone.";
 
 // Workplace only.
+$string['attr-division'] = "Workplace only: Job department";
 $string['attr-manager'] = "SCIM resource URI referencing the user's manager.";
 $string['attr-manager-value'] = "Workplace only: populates job assignment manager. Manager's Moodle idnumber.";
 $string['attr-title'] = "Workplace only: Job assignment - Position.";

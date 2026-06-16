@@ -154,7 +154,7 @@ class workplace_helper {
      * @param string $posname of the position to match on and assign.
      * @return void
      */
-    public function assign_job(int $userid, string $posname = '', bool $sendscimerror = true, string $deptname = '',): void {
+    public function assign_job(int $userid, string $posname = '', bool $sendscimerror = true, string $deptname = ''): void {
 
         $currenttime = time();
         $tenantid = $this->get_tenant($sendscimerror)->get('id');

@@ -105,6 +105,17 @@ class scimentschemaconfigresponse extends scimresponse {
                 ],
             ],
             [
+                "name" => "division",
+                "type" => "string",
+                "multiValued" => false,
+                "required" => false,
+                "caseExact" => false,
+                "mutability" => "readWrite",
+                "returned" => "default",
+                "uniqueness" => "none",
+                "description" => "Workplace only: Job assignments - Department.",
+            ],
+            [
                 "name" => "department",
                 "type" => "string",
                 "multiValued" => false,
@@ -113,7 +124,7 @@ class scimentschemaconfigresponse extends scimresponse {
                 "mutability" => "readWrite",
                 "returned" => "default",
                 "uniqueness" => "none",
-                "description" => "Workplace only: Job assignment - Department.",
+                "description" => "User profile - Department.",
             ],
         ];
     }
