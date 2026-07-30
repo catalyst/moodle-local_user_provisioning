@@ -611,25 +611,25 @@ function local_user_provisioning_get_guid() : string {
  * Add / Update user details for custom user profile field - team.
  *
  * @param int $userid User ID
- * @param int $teamfieldid Team custom profile field ID
- * @param string|null $team Team
+ * @param int $fieldid Team custom profile field ID
+ * @param string|int|null $team Team
  * @return void
  */
-function local_user_provisioning_team(int $userid, int $teamfieldid, ?string $team) : void {
+function local_user_provisioning_customfield(int $userid, int $fieldid, string|int|null $value) : void {
     global $DB;
 
     // User profile data doesn't accept null values, change it to empty string.
-    if (is_null($team)) {
-        $team = '';
+    if (is_null($value)) {
+        $value = '';
     }
 
-    if ($record = $DB->get_record('user_info_data', array('userid' => $userid, 'fieldid' => $teamfieldid))) {
-        $DB->set_field('user_info_data', 'data', $team, array('userid' => $userid, 'fieldid' => $teamfieldid));
+    if ($record = $DB->get_record('user_info_data', array('userid' => $userid, 'fieldid' => $fieldid))) {
+        $DB->set_field('user_info_data', 'data', $value, array('userid' => $userid, 'fieldid' => $fieldid));
     } else {
         $thisrecord = new stdClass();
         $thisrecord->userid = $userid;
-        $thisrecord->fieldid = $teamfieldid;
-        $thisrecord->data = $team;
+        $thisrecord->fieldid = $fieldid;
+        $thisrecord->data = $value;
         $DB->insert_record('user_info_data', $thisrecord);
     }
 }
@@ -686,7 +686,9 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
     }
 
     // Default required fields.
-    $validateuser->idnumber = local_user_provisioning_get_guid();
+    if (empty($validateuser->idnumber)) {
+        $validateuser->idnumber = local_user_provisioning_get_guid();
+    }
     $validateuser->firstaccess = 0;
     $validateuser->mnethostid = 1;
     $validateuser->confirmed = 1;
@@ -705,7 +707,17 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
         $params['fieldid'] = 0;
         if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
             $params['fieldid'] = $fieldid;
-            local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team); // Update custom profile field - Team.
+            local_user_provisioning_customfield($validateuser->id, $fieldid, $validateuser->team);
+        }
+
+        // Iterate through all fields starting with custom_
+        foreach ($validateuser as $key => $value) {
+            if (strpos($key, 'custom_') === 0) {
+                $fieldname = str_replace('custom_', '', $key);
+                if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => $fieldname))) {
+                    local_user_provisioning_customfield($validateuser->id, $fieldid, $value);
+                }
+            }
         }
 
         $additionalsql = " WHERE u.idnumber = :idnumber";
@@ -728,11 +740,6 @@ function local_user_provisioning_create_user(array $json, string $auth = 'oauthb
 function local_user_provisioning_update_user(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Custom user profile field - team.
-    $params['fieldid'] = 0;
-    if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
-        $params['fieldid'] = $fieldid;
-    }
 
     $sql = local_user_provisioning_get_userquerysql();
     $sql .= " WHERE u.idnumber = :idnumber";
@@ -763,8 +770,22 @@ function local_user_provisioning_update_user(array $json, string $idnumber, stri
         user_update_user($validateuser, false, false); // Update user details.
 
         // Update custom profile field - Team.
+        $params['fieldid'] = 0;
+        if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+            $params['fieldid'] = $fieldid;
+        }
         if ($fieldid) {
-            local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team);
+            local_user_provisioning_customfield($validateuser->id, $fieldid, $validateuser->team);
+        }
+
+        // Iterate through all fields starting with custom_
+        foreach ($validateuser as $key => $value) {
+            if (strpos($key, 'custom_') === 0) {
+                $fieldname = str_replace('custom_', '', $key);
+                if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => $fieldname))) {
+                    local_user_provisioning_customfield($validateuser->id, $fieldid, $value);
+                }
+            }
         }
 
         $additionalsql = " WHERE u.idnumber = :idnumber";
@@ -892,11 +913,6 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
 function local_user_provisioning_update_userfields(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
 
-    // Custom user profile field - team.
-    $params['fieldid'] = 0;
-    if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
-        $params['fieldid'] = $fieldid;
-    }
 
     $sql = local_user_provisioning_get_userquerysql();
     $sql .= " WHERE u.idnumber = :idnumber";
@@ -927,8 +943,21 @@ function local_user_provisioning_update_userfields(array $json, string $idnumber
         user_update_user($validateuser, false, false); // Update user details.
 
         // Update custom profile field - Team.
+        $params['fieldid'] = 0;
+        if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => USERPROFILEFIELDTEAM))) {
+            $params['fieldid'] = $fieldid;
+        }
         if ($fieldid) {
-            local_user_provisioning_team($validateuser->id, $fieldid, $validateuser->team);
+            local_user_provisioning_customfield($validateuser->id, $fieldid, $validateuser->team);
+        }
+        // Iterate through all fields starting with custom_
+        foreach ($validateuser as $key => $value) {
+            if (strpos($key, 'custom_') === 0) {
+                $fieldname = str_replace('custom_', '', $key);
+                if ($fieldid = $DB->get_field('user_info_field', 'id', array('shortname' => $fieldname))) {
+                    local_user_provisioning_customfield($validateuser->id, $fieldid, $value);
+                }
+            }
         }
 
         $additionalsql = " WHERE u.idnumber = :idnumber";
