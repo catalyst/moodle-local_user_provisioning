@@ -266,7 +266,7 @@ function local_user_provisioning_get_userquerysql() : string {
 
     return "SELECT distinct u.id, u.idnumber, u.username, u.alternatename, u.firstname, u.lastname, u.email,
                         u.lang, u.auth, u.department, u.city, u.country, u.suspended, u.timecreated, u.timemodified,
-                        uid.data AS team, p.fullname AS title
+                        uid.data AS team
               FROM {user} u
               LEFT JOIN {user_info_data} uid ON u.id = uid.userid AND fieldid = :fieldid";
 }
@@ -291,16 +291,16 @@ function local_user_provisioning_get_users(array $json, string $auth = 'oauthbea
 
         switch ($filter[0]) {
             case 'userName':
-                $extrasql = 'WHERE u.username ';
+                $extrasql = ' WHERE u.username ';
             break;
             case 'name.familyName':
-                $extrasql = 'WHERE u.lastname ';
+                $extrasql = ' WHERE u.lastname ';
             break;
             case 'name.givenName':
-                $extrasql = 'WHERE u.firstname ';
+                $extrasql = ' WHERE u.firstname ';
             break;
             case 'emails':
-                $extrasql = 'WHERE u.email ';
+                $extrasql = ' WHERE u.email ';
             break;
             default:
                 $invalidfilter = true;
