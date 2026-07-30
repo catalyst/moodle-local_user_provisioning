@@ -262,13 +262,18 @@ function local_user_provisioning_isactive(int $suspended) : bool {
  *
  * @return string SQL Script.
  */
-function local_user_provisioning_get_userquerysql() : string {
-
-    return "SELECT distinct u.id, u.idnumber, u.username, u.alternatename, u.firstname, u.lastname, u.email,
-                        u.lang, u.auth, u.department, u.city, u.country, u.suspended, u.timecreated, u.timemodified,
-                        uid.data AS team
-              FROM {user} u
-              LEFT JOIN {user_info_data} uid ON u.id = uid.userid AND fieldid = :fieldid";
+function local_user_provisioning_get_userquerysql($includeteam = true) : string {
+    if ($includeteam) {
+        return "SELECT distinct u.id, u.idnumber, u.username, u.alternatename, u.firstname, u.lastname, u.email,
+                            u.lang, u.auth, u.department, u.city, u.country, u.suspended, u.timecreated, u.timemodified,
+                            uid.data AS team
+                  FROM {user} u
+                  LEFT JOIN {user_info_data} uid ON u.id = uid.userid AND fieldid = :fieldid";
+    } else {
+        return "SELECT distinct u.id, u.idnumber, u.username, u.alternatename, u.firstname, u.lastname, u.email,
+                            u.lang, u.auth, u.department, u.city, u.country, u.suspended, u.timecreated, u.timemodified
+                  FROM {user} u";
+    }
 }
 
 /**
@@ -891,6 +896,12 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
                     break;
                     case 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager':
                     break;
+                    default:
+                        if (strpos($thisfield, 'urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User') === 0) {
+                            $customfield = str_replace('urn:ietf:params:scim:schemas:extension:CustomExtension:2.0:User:', '', $thisfield);
+                            $user->$customfield = $thisfieldvalue;
+                        }
+                    break;
                 }
             }
         }
@@ -912,9 +923,7 @@ function local_user_provisioning_validate_datafields(array $json, object $user, 
  */
 function local_user_provisioning_update_userfields(array $json, string $idnumber, string $auth = 'oauthbearertoken') : void {
     global $DB;
-
-
-    $sql = local_user_provisioning_get_userquerysql();
+    $sql = local_user_provisioning_get_userquerysql(false);
     $sql .= " WHERE u.idnumber = :idnumber";
 
     $params['idnumber'] = $idnumber;
