@@ -45,7 +45,17 @@ if ($hassiteconfig) {
             new lang_string('debug_email_address_default', 'local_user_provisioning'),
             core\param::EMAIL->value
         ));
+
     }
 
     $ADMIN->add('localplugins', $settingspage);
+
+    $ADMIN->add(
+        'localplugins',
+        new admin_externalpage(
+            'local_user_provisioning_clients',
+            get_string('clients', 'local_user_provisioning'),
+            new core\url('/local/user_provisioning/clients.php')
+        )
+    );
 }

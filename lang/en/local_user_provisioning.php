@@ -37,6 +37,13 @@ $string['oauth2bearer'] = 'OAuth Bearer Token';
 $string['oauth2bearer_desc'] = 'Authentication scheme using the OAuth Bearer Token Standard 2.0';
 $string['httpbasic'] = 'HTTP Basic';
 $string['httpbasic_desc'] = 'Authentication scheme using the HTTP Basic Standard';
+$string['clients'] = 'SCIM Clients';
+$string['additionalscopes'] = 'Additional Scopes';
+$string['client_id'] = 'Client ID';
+$string['clientsecret'] = 'Client Secret';
+$string['manageclients'] = 'Manage SCIM Clients';
+$string['addclient'] = 'Add New Client';
+$string['confirmdelete'] = 'Are you sure you want to delete this client?';
 // Error...
 $string['error:badrequest'] = 'Bad Request'; // Error code 400.
 $string['error:badrequest_help'] = 'Request is unparsable, syntactically incorrect, or violates schema.';
