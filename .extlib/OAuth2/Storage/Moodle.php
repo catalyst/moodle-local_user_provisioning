@@ -41,7 +41,7 @@ class Moodle implements
     {
         global $DB;
         $client_secret_db = $DB->get_field('oauth_clients', 'client_secret', array('client_id' => $client_id));
-        return $client_secret == $client_secret_db;
+        return $client_secret === $client_secret_db;
     }
 
     public function isPublicClient($client_id)

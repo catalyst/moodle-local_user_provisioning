@@ -622,26 +622,6 @@ function validate_auth(string $auth = 'manual'): bool {
 }
 
 /**
- * Resolve a safe default auth plugin for provisioned users.
- *
- * Prefers saml2 when enabled, otherwise falls back to manual or first enabled plugin.
- *
- * @return string
- * @package local_user_provisioning
- */
-function get_default_auth(): string {
-    global $CFG;
-
-    $supportedauths = array_values(array_filter(array_map('trim', explode(',', $CFG->auth))));
-
-    if (!in_array($auth, $supportedauths, true)) {
-        return false;
-    }
-
-    return true;
-}
-
-/**
  * Validate JSON data.
  *
  * @param array $json User data
